@@ -25,22 +25,27 @@ fun BottomBar(
         modifier = Modifier
             .fillMaxWidth()
             .background(Color(0xFFF5F5F5))
-            .padding(12.dp),
+            .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
     ) {
         if (appState == AppState.POINTS_SET) {
             Text("Введите размер в мм: ", fontSize = 14.sp)
+            Spacer(Modifier.width(8.dp))
             OutlinedTextField(
                 value = mmText,
                 onValueChange = onMmTextChange,
-                modifier = Modifier.width(100.dp),
-                singleLine = true
+                modifier = Modifier.width(80.dp).height(48.dp),
+                singleLine = true,
+                textStyle = androidx.compose.ui.text.TextStyle(fontSize = 14.sp)
             )
-            Spacer(Modifier.width(16.dp))
+            Spacer(Modifier.width(12.dp))
         }
 
-        Button(onClick = onButtonClick) {
+        Button(
+            onClick = onButtonClick,
+            modifier = Modifier.height(48.dp)
+        ) {
             Text(buttonText)
         }
     }
