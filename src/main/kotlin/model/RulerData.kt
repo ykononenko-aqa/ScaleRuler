@@ -12,14 +12,3 @@ data class RulerData(
         const val DEFAULT_HEIGHT_MM = 0.5f
     }
 }
-
-data class RulerLabelData(
-    val text: String,
-    val x: Float,
-    val y: Float
-)
-
-data class RulerLabelsData(
-    val labels: List<RulerLabelData>,
-    val unitLabel: RulerLabelData
-)

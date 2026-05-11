@@ -2,8 +2,9 @@ package com.ykononenko.ui
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,15 +16,12 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.sp
 import com.ykononenko.logic.RulerDrawer
 import com.ykononenko.model.AppPoints
 import com.ykononenko.model.RulerData
 import com.ykononenko.state.AppState
-import kotlin.math.roundToInt
 
 @Composable
 fun MainArea(
@@ -52,33 +50,11 @@ fun MainArea(
                 Canvas(
                     modifier = Modifier
                         .fillMaxSize()
-                        .pointerInput(appState, ruler, image) {
-                            when (appState) {
-                                AppState.AWAITING_POINT_1, AppState.AWAITING_POINT_2 -> {
-                                    detectTapGestures { onCanvasClick(it) }
-                                }
-                                AppState.RULER_PLACED -> {
-                                    awaitPointerEventScope {
-                                        while (true) {
-                                            val down = awaitPointerEvent()
-                                            val dc = down.changes.firstOrNull() ?: continue
-                                            if (!dc.pressed) continue
-                                            dc.consume()
-                                            var prev = dc.position
-                                            do {
-                                                val ev = awaitPointerEvent()
-                                                val ch = ev.changes.firstOrNull() ?: break
-                                                val d = Offset(ch.position.x - prev.x, ch.position.y - prev.y)
-                                                prev = ch.position
-                                                ch.consume()
-                                                onRulerDrag(d)
-                                            } while (ch.pressed)
-                                        }
-                                    }
-                                }
-                                else -> {}
-                            }
-                        }
+                        .canvasInput(
+                            appState = appState,
+                            onClick = { onCanvasClick(it) },
+                            onDrag = { onRulerDrag(it) }
+                        )
                 ) {
                     onCanvasSizeChanged(size)
                     val layout = calculateImageLayout(image, size)

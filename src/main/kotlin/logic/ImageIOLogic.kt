@@ -74,10 +74,9 @@ fun saveImageWithDialog(image: ImageBitmap, ruler: RulerData?): Boolean {
 
         // Дорисовываем подписи через AWT
         if (ruler != null) {
-            val labelsData = RulerDrawer.calculateLabels(ruler)
             val bufferedImage = javax.imageio.ImageIO.read(out)
             val g = bufferedImage.createGraphics()
-            RulerDrawer.drawLabelsOnAWT(g, labelsData, ruler)
+            RulerDrawer.drawLabelsOnAWT(g, ruler)
             g.dispose()
             javax.imageio.ImageIO.write(bufferedImage, "png", out)
         }

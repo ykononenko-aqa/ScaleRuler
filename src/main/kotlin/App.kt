@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.ImageBitmap
 import com.ykononenko.logic.*
@@ -103,17 +102,7 @@ fun App(onExit: () -> Unit = {}) {
                             val img = loadedImage
                             if (mm != null && mm > 0 && p1 != null && p2 != null && img != null) {
                                 val scalePxPerMm = distanceBetween(p1, p2) / mm
-                                val lengthPx = RulerData.DEFAULT_LENGTH_MM * scalePxPerMm
-                                val heightPx = RulerData.DEFAULT_HEIGHT_MM * scalePxPerMm
-                                val fontSize = (heightPx * 0.6f).coerceIn(10f, 36f)
-                                val mmLabelWidth = fontSize * 2f  // запас под "мм"
-                                val margin = 10f
-
-                                ruler = RulerData(
-                                    x = img.width - lengthPx - margin - mmLabelWidth,
-                                    y = img.height - heightPx - fontSize - 4f - margin,
-                                    scalePxPerMm = scalePxPerMm
-                                )
+                                ruler = RulerFactory.create(img, scalePxPerMm)
                                 points = AppPoints()
                                 appState = AppState.RULER_PLACED
                             }
