@@ -24,6 +24,8 @@ compose.desktop {
         mainClass = "com.ykononenko.MainKt"
         nativeDistributions {
             targetFormats(TargetFormat.Msi, TargetFormat.Dmg, TargetFormat.Deb)
+            packageName = "ScaleRuler"
+            packageVersion = "1.0.0"
         }
     }
 }
