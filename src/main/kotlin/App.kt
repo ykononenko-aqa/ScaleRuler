@@ -103,12 +103,18 @@ fun App(onExit: () -> Unit = {}) {
                             val img = loadedImage
                             if (mm != null && mm > 0 && p1 != null && p2 != null && img != null) {
                                 val scalePxPerMm = distanceBetween(p1, p2) / mm
+                                val lengthPx = RulerData.DEFAULT_LENGTH_MM * scalePxPerMm
+                                val heightPx = RulerData.DEFAULT_HEIGHT_MM * scalePxPerMm
+                                val fontSize = (heightPx * 0.6f).coerceIn(10f, 36f)
+                                val mmLabelWidth = fontSize * 2f  // запас под "мм"
+                                val margin = 10f
+
                                 ruler = RulerData(
-                                    x = img.width / 2f,
-                                    y = img.height / 2f,
+                                    x = img.width - lengthPx - margin - mmLabelWidth,
+                                    y = img.height - heightPx - fontSize - 4f - margin,
                                     scalePxPerMm = scalePxPerMm
                                 )
-                                points = AppPoints()  // ← очищаем все точки
+                                points = AppPoints()
                                 appState = AppState.RULER_PLACED
                             }
                         }

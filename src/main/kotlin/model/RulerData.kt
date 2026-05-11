@@ -1,7 +1,25 @@
 package com.ykononenko.model
 
 data class RulerData(
-    val x: Float,              // относительно исходного изображения
-    val y: Float,              // относительно исходного изображения
-    val scalePxPerMm: Float    // масштаб (пикселей изображения на 1 мм)
+    val x: Float,
+    val y: Float,
+    val scalePxPerMm: Float,
+    val lengthMm: Float = DEFAULT_LENGTH_MM,
+    val heightMm: Float = DEFAULT_HEIGHT_MM
+) {
+    companion object {
+        const val DEFAULT_LENGTH_MM = 5f
+        const val DEFAULT_HEIGHT_MM = 0.5f
+    }
+}
+
+data class RulerLabelData(
+    val text: String,
+    val x: Float,
+    val y: Float
+)
+
+data class RulerLabelsData(
+    val labels: List<RulerLabelData>,
+    val unitLabel: RulerLabelData
 )

@@ -5,110 +5,155 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import org.jetbrains.skia.Canvas as SkiaCanvas
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import com.ykononenko.model.RulerData
-import com.ykononenko.ui.ImageLayout
+import com.ykononenko.model.RulerLabelData
+import com.ykononenko.model.RulerLabelsData
 import com.ykononenko.ui.imageToCanvas
+import org.jetbrains.skia.Canvas as SkiaCanvas
 
 object RulerDrawer {
 
-    const val RULER_WIDTH_PX = 200f
-    const val RULER_HEIGHT_PX = 50f
-
-    fun drawOnCanvas(scope: DrawScope, ruler: RulerData, layout: ImageLayout) {
+    fun drawOnCanvas(scope: DrawScope, ruler: RulerData, layout: com.ykononenko.ui.ImageLayout) {
         val canvasPos = imageToCanvas(Offset(ruler.x, ruler.y), layout)
+        val rulerWidthPx = ruler.lengthMm * ruler.scalePxPerMm * layout.scale
+        val rulerHeightPx = ruler.heightMm * ruler.scalePxPerMm * layout.scale
 
-        // Фон
-        scope.drawRect(
-            color = Color.White.copy(alpha = 0.9f),
-            topLeft = canvasPos,
-            size = Size(RULER_WIDTH_PX, RULER_HEIGHT_PX)
-        )
-        // Рамка
-        scope.drawRect(
-            color = Color.Black,
-            topLeft = canvasPos,
-            size = Size(RULER_WIDTH_PX, RULER_HEIGHT_PX),
-            style = Stroke(width = 1f)
-        )
-
-        // Деления
-        val stepMm = calculateStepMm(ruler.scalePxPerMm * layout.scale)
+        val stepMm = calculateStepMm(ruler.scalePxPerMm * layout.scale, ruler.lengthMm)
         val stepPx = stepMm * ruler.scalePxPerMm * layout.scale
 
+        // Закрашенные блоки
         var x = 0f
-        var mmValue = 0f
-        while (x <= RULER_WIDTH_PX + 1f) {
-            val tickX = canvasPos.x + x
-            val isMajor = mmValue.toInt() % 10 == 0
-            val tickHeight = if (isMajor) 14f else 7f
+        var blockIndex = 0
 
-            scope.drawLine(
-                color = Color.Black,
-                start = Offset(tickX, canvasPos.y),
-                end = Offset(tickX, canvasPos.y + tickHeight),
-                strokeWidth = if (isMajor) 1.5f else 1f
+        while (x < rulerWidthPx) {
+            val blockLeft = canvasPos.x + x
+            val isBlack = blockIndex % 2 != 0
+
+            scope.drawRect(
+                color = if (isBlack) Color.Black else Color.White,
+                topLeft = Offset(blockLeft, canvasPos.y),
+                size = Size(stepPx, rulerHeightPx)
             )
+            scope.drawRect(
+                color = Color.Black,
+                topLeft = Offset(blockLeft, canvasPos.y),
+                size = Size(stepPx, rulerHeightPx),
+                style = Stroke(width = 0.5f)
+            )
+
             x += stepPx
-            mmValue += stepMm
+            blockIndex++
         }
     }
 
     fun drawOnSkiaCanvas(canvas: SkiaCanvas, ruler: RulerData) {
-        val rw = RULER_WIDTH_PX
-        val rh = RULER_HEIGHT_PX
+        val rw = ruler.lengthMm * ruler.scalePxPerMm
+        val rh = ruler.heightMm * ruler.scalePxPerMm
         val rx = ruler.x
         val ry = ruler.y
 
-        // Фон
-        val bgPaint = org.jetbrains.skia.Paint().apply {
-            color = org.jetbrains.skia.Color.makeRGB(255, 255, 255)
-            alpha = 230
-        }
-        canvas.drawRect(org.jetbrains.skia.Rect(rx, ry, rx + rw, ry + rh), bgPaint)
+        val stepMm = calculateStepMm(ruler.scalePxPerMm, ruler.lengthMm)
+        val stepPx = stepMm * ruler.scalePxPerMm
 
-        // Рамка
+        val blackPaint = org.jetbrains.skia.Paint().apply {
+            color = org.jetbrains.skia.Color.makeRGB(0, 0, 0)
+        }
+        val whitePaint = org.jetbrains.skia.Paint().apply {
+            color = org.jetbrains.skia.Color.makeRGB(255, 255, 255)
+        }
         val borderPaint = org.jetbrains.skia.Paint().apply {
             color = org.jetbrains.skia.Color.makeRGB(0, 0, 0)
             mode = org.jetbrains.skia.PaintMode.STROKE
-            strokeWidth = 1f
-        }
-        canvas.drawRect(org.jetbrains.skia.Rect(rx, ry, rx + rw, ry + rh), borderPaint)
-
-        // Деления и подписи
-        var stepMm = 1f
-        var stepPx = stepMm * ruler.scalePxPerMm
-        while (stepPx < 5f) { stepMm++; stepPx = stepMm * ruler.scalePxPerMm }
-
-        val linePaint = org.jetbrains.skia.Paint().apply {
-            color = org.jetbrains.skia.Color.makeRGB(0, 0, 0)
-            strokeWidth = 1f
-        }
-        val font = org.jetbrains.skia.Font(null, 10f)
-        val textPaint = org.jetbrains.skia.Paint().apply {
-            color = org.jetbrains.skia.Color.makeRGB(0, 0, 0)
-            isAntiAlias = true
+            strokeWidth = 0.5f
         }
 
         var x = 0f
+        var blockIndex = 0
+
+        while (x < rw) {
+            val blockLeft = rx + x
+            val paint = if (blockIndex % 2 != 0) blackPaint else whitePaint
+
+            canvas.drawRect(
+                org.jetbrains.skia.Rect(blockLeft, ry, blockLeft + stepPx, ry + rh),
+                paint
+            )
+            canvas.drawRect(
+                org.jetbrains.skia.Rect(blockLeft, ry, blockLeft + stepPx, ry + rh),
+                borderPaint
+            )
+
+            x += stepPx
+            blockIndex++
+        }
+    }
+
+    fun calculateLabels(ruler: RulerData): RulerLabelsData {
+        val rw = ruler.lengthMm * ruler.scalePxPerMm
+        val rh = ruler.heightMm * ruler.scalePxPerMm
+
+        val stepMm = calculateStepMm(ruler.scalePxPerMm, ruler.lengthMm)
+        val stepPx = stepMm * ruler.scalePxPerMm
+        val majorStep = if (ruler.lengthMm <= 10f) 1f else 10f
+
+        val labels = mutableListOf<RulerLabelData>()
+        var x = 0f
         var mmVal = 0f
-        while (x <= rw + 1f) {
-            val tx = rx + x
-            val isMajor = mmVal.toInt() % 10 == 0
-            val tickH = if (isMajor) 14f else 7f
-            canvas.drawLine(tx, ry, tx, ry + tickH, linePaint)
-            if (isMajor) {
-                canvas.drawString("${mmVal.toInt()}", tx - 8f, ry + rh + 14f, font, textPaint)
+        val fontSize = (rh * 0.5f).coerceIn(8f, 48f)
+
+        while (x < rw) {
+            if (mmVal.toInt() % majorStep.toInt() == 0) {
+                labels.add(
+                    RulerLabelData(
+                        text = "${mmVal.toInt()}",
+                        x = ruler.x + x,
+                        y = ruler.y + rh
+                    )
+                )
             }
             x += stepPx
             mmVal += stepMm
         }
-        canvas.drawString("мм", rx + rw - 22f, ry + rh + 14f, font, textPaint)
+
+        val unitLabel = RulerLabelData(
+            text = "мм",
+            x = ruler.x + rw - 4f,
+            y = ruler.y + rh  // было: rh + fontSize
+        )
+
+        return RulerLabelsData(labels, unitLabel)
     }
 
-    private fun calculateStepMm(scalePxPerMm: Float): Float {
+    fun drawLabelsOnAWT(g: java.awt.Graphics2D, labelsData: RulerLabelsData, ruler: RulerData) {
+        val rh = ruler.heightMm * ruler.scalePxPerMm
+        val fontSize = (rh * 0.6f).coerceIn(10f, 36f)
+
+        g.font = java.awt.Font("SansSerif", java.awt.Font.BOLD, fontSize.toInt())
+        g.color = java.awt.Color.BLACK
+
+        val labels = labelsData.labels
+        if (labels.size >= 2) {
+            val stepPx = ruler.scalePxPerMm * calculateStepMm(ruler.scalePxPerMm, ruler.lengthMm)
+
+            // "1" — в конце первой ячейки
+            val oneX = labels[0].x + stepPx
+            g.drawString("1", oneX - fontSize / 2f, labels[0].y - rh + fontSize - 2f)
+
+            // "5" — в конце пятой ячейки
+            val fiveX = labels[4].x + stepPx
+            g.drawString("5", fiveX - fontSize / 2f, labels[0].y - rh + fontSize - 2f)
+
+            // "мм" — после пятой ячейки
+            g.font = java.awt.Font("SansSerif", java.awt.Font.PLAIN, (fontSize * 0.7f).toInt())
+            g.drawString("мм", fiveX + 2f, labels[0].y - rh + fontSize - 2f)
+        }
+    }
+
+    fun calculateStepMm(scalePxPerMm: Float, totalMm: Float): Float {
         var step = 1f
-        while (step * scalePxPerMm < 5f) step++
-        return step
+        while (step * scalePxPerMm < 3f && step < totalMm) step++
+        return minOf(step, totalMm)
     }
 }

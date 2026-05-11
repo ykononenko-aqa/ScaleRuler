@@ -54,23 +54,33 @@ fun saveImageWithDialog(image: ImageBitmap, ruler: RulerData?): Boolean {
         val imageBytes = ByteArray(w * h * 4)
         for (i in imagePixels.indices) {
             val c = imagePixels[i]
-            imageBytes[i * 4] = (c and 0xFF).toByte()           // B
-            imageBytes[i * 4 + 1] = ((c shr 8) and 0xFF).toByte()  // G
-            imageBytes[i * 4 + 2] = ((c shr 16) and 0xFF).toByte() // R
-            imageBytes[i * 4 + 3] = ((c shr 24) and 0xFF).toByte() // A
+            imageBytes[i * 4] = (c and 0xFF).toByte()
+            imageBytes[i * 4 + 1] = ((c shr 8) and 0xFF).toByte()
+            imageBytes[i * 4 + 2] = ((c shr 16) and 0xFF).toByte()
+            imageBytes[i * 4 + 3] = ((c shr 24) and 0xFF).toByte()
         }
         skBitmap.installPixels(skBitmap.imageInfo, imageBytes, w * 4)
         canvas.drawImage(org.jetbrains.skia.Image.makeFromBitmap(skBitmap), 0f, 0f)
 
-        // Рисуем линейку (единый метод)
+        // Рисуем линейку (блоки)
         if (ruler != null) {
             RulerDrawer.drawOnSkiaCanvas(canvas, ruler)
         }
 
-        // Сохраняем Surface напрямую в PNG
+        // Сохраняем в PNG
         val resultImage = surface.makeImageSnapshot()
         val encoded = resultImage.encodeToData(org.jetbrains.skia.EncodedImageFormat.PNG, 100)
         out.writeBytes(encoded?.bytes ?: throw Exception("Failed to encode image"))
+
+        // Дорисовываем подписи через AWT
+        if (ruler != null) {
+            val labelsData = RulerDrawer.calculateLabels(ruler)
+            val bufferedImage = javax.imageio.ImageIO.read(out)
+            val g = bufferedImage.createGraphics()
+            RulerDrawer.drawLabelsOnAWT(g, labelsData, ruler)
+            g.dispose()
+            javax.imageio.ImageIO.write(bufferedImage, "png", out)
+        }
 
         true
     } catch (e: Exception) {

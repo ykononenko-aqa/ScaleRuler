@@ -3,9 +3,7 @@ package com.ykononenko.ui
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,11 +16,14 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.sp
 import com.ykononenko.logic.RulerDrawer
 import com.ykononenko.model.AppPoints
 import com.ykononenko.model.RulerData
 import com.ykononenko.state.AppState
+import kotlin.math.roundToInt
 
 @Composable
 fun MainArea(
@@ -36,50 +37,56 @@ fun MainArea(
     message: String,
     modifier: Modifier = Modifier
 ) {
+    var currentLayout by remember { mutableStateOf<ImageLayout?>(null) }
+
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .background(Color(0xFFE0E0E0)),
+            .background(Color(0xFFE0E0E0))
+            .onSizeChanged { /* для перерасчёта */ },
         contentAlignment = Alignment.Center
     ) {
         if (image != null && appState != AppState.IDLE) {
-            Canvas(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .pointerInput(appState, ruler, image) {
-                        when (appState) {
-                            AppState.AWAITING_POINT_1,
-                            AppState.AWAITING_POINT_2 -> {
-                                detectTapGestures { onCanvasClick(it) }
-                            }
-                            AppState.RULER_PLACED -> {
-                                awaitPointerEventScope {
-                                    while (true) {
-                                        val down = awaitPointerEvent()
-                                        val dc = down.changes.firstOrNull() ?: continue
-                                        if (!dc.pressed) continue
-                                        dc.consume()
-                                        var prev = dc.position
-                                        do {
-                                            val ev = awaitPointerEvent()
-                                            val ch = ev.changes.firstOrNull() ?: break
-                                            val d = Offset(ch.position.x - prev.x, ch.position.y - prev.y)
-                                            prev = ch.position
-                                            ch.consume()
-                                            onRulerDrag(d)
-                                        } while (ch.pressed)
+            Box(modifier = Modifier.fillMaxSize()) {
+                // Слой Canvas
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .pointerInput(appState, ruler, image) {
+                            when (appState) {
+                                AppState.AWAITING_POINT_1, AppState.AWAITING_POINT_2 -> {
+                                    detectTapGestures { onCanvasClick(it) }
+                                }
+                                AppState.RULER_PLACED -> {
+                                    awaitPointerEventScope {
+                                        while (true) {
+                                            val down = awaitPointerEvent()
+                                            val dc = down.changes.firstOrNull() ?: continue
+                                            if (!dc.pressed) continue
+                                            dc.consume()
+                                            var prev = dc.position
+                                            do {
+                                                val ev = awaitPointerEvent()
+                                                val ch = ev.changes.firstOrNull() ?: break
+                                                val d = Offset(ch.position.x - prev.x, ch.position.y - prev.y)
+                                                prev = ch.position
+                                                ch.consume()
+                                                onRulerDrag(d)
+                                            } while (ch.pressed)
+                                        }
                                     }
                                 }
+                                else -> {}
                             }
-                            else -> {}
                         }
-                    }
-            ) {
-                onCanvasSizeChanged(size)
-                val layout = calculateImageLayout(image, size)
-                drawImageScaled(image, layout)
-                drawPoints(points, layout)
-                ruler?.let { RulerDrawer.drawOnCanvas(this, it, layout) }
+                ) {
+                    onCanvasSizeChanged(size)
+                    val layout = calculateImageLayout(image, size)
+                    currentLayout = layout
+                    drawImageScaled(image, layout)
+                    drawPoints(points, layout)
+                    ruler?.let { RulerDrawer.drawOnCanvas(this, it, layout) }
+                }
             }
         } else {
             Text(message, fontSize = 16.sp, color = Color.DarkGray)
