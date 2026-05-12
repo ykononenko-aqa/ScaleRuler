@@ -98,39 +98,45 @@ fun BatchDialog(
                             Text("Выполняется...")
                         }
                     } else {
-                        TextButton(onClick = onDismiss) {
-                            Text("Закрыть")
-                        }
-                        Spacer(Modifier.width(8.dp))
-                        Button(
-                            onClick = {
-                                val src = sourceDir
-                                val tgt = targetDir
-                                if (src != null && tgt != null) {
-                                    isProcessing = true
-                                    resultMessage = null
-                                    scope.launch {
-                                        val success = withContext(Dispatchers.IO) {
-                                            BatchProcessor.process(
-                                                sourceDir = src,
-                                                targetDir = tgt,
-                                                ruler = ruler,
-                                                unit = unit,
-                                                onProgress = { cur, tot, file ->
-                                                    progress = cur
-                                                    total = tot
-                                                    currentFile = file
-                                                }
-                                            )
+                        if (resultMessage != null) {
+                            TextButton(onClick = onDismiss) {
+                                Text("Закрыть")
+                            }
+                        } else {
+                            TextButton(onClick = onDismiss) {
+                                Text("Отмена")
+                            }
+                            Spacer(Modifier.width(8.dp))
+                            Button(
+                                onClick = {
+                                    val src = sourceDir
+                                    val tgt = targetDir
+                                    if (src != null && tgt != null) {
+                                        isProcessing = true
+                                        resultMessage = null
+                                        scope.launch {
+                                            val success = withContext(Dispatchers.IO) {
+                                                BatchProcessor.process(
+                                                    sourceDir = src,
+                                                    targetDir = tgt,
+                                                    ruler = ruler,
+                                                    unit = unit,
+                                                    onProgress = { cur, tot, file ->
+                                                        progress = cur
+                                                        total = tot
+                                                        currentFile = file
+                                                    }
+                                                )
+                                            }
+                                            resultMessage = "Готово. Обработано $success файлов."
+                                            isProcessing = false
                                         }
-                                        resultMessage = "Готово. Обработано $success файлов."
-                                        isProcessing = false
                                     }
-                                }
-                            },
-                            enabled = sourceDir != null && targetDir != null
-                        ) {
-                            Text("Запустить")
+                                },
+                                enabled = sourceDir != null && targetDir != null
+                            ) {
+                                Text("Запустить")
+                            }
                         }
                     }
                 }
