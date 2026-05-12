@@ -5,6 +5,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import com.ykononenko.model.LengthUnit
 import com.ykononenko.model.RulerData
 import com.ykononenko.ui.imageToCanvas
 import org.jetbrains.skia.Canvas as SkiaCanvas
@@ -53,27 +54,22 @@ object RulerDrawer {
         }
     }
 
-    fun drawLabelsOnAWT(g: java.awt.Graphics2D, ruler: RulerData) {
+    fun drawLabelsOnAWT(g: java.awt.Graphics2D, ruler: RulerData, unit: LengthUnit) {
         val rh = ruler.heightMm * ruler.scalePxPerMm
         val fontSize = (rh * 0.6f).coerceIn(10f, 36f)
         val stepMm = calculateStepMm(ruler.scalePxPerMm, ruler.lengthMm)
         val stepPx = stepMm * ruler.scalePxPerMm
-        val textY = ruler.y + rh - 2f  // внутри линейки, у нижнего края
+        val textY = ruler.y + rh - 2f
+        val unitLabel = unit.label
 
         g.font = java.awt.Font("SansSerif", java.awt.Font.BOLD, fontSize.toInt())
         g.color = java.awt.Color.BLACK
 
-        // "1" — в конце первой ячейки
         val oneX = ruler.x + stepPx
-        g.drawString("1", oneX - fontSize / 2f, textY)
+        g.drawString("1 $unitLabel", oneX - fontSize / 2f, textY)
 
-        // "5" — в конце пятой ячейки
         val fiveX = ruler.x + 5f * stepPx
-        g.drawString("5", fiveX - fontSize / 2f, textY)
-
-        // "мм"
-        g.font = java.awt.Font("SansSerif", java.awt.Font.PLAIN, (fontSize * 0.7f).toInt())
-        g.drawString("мм", fiveX + 2f, textY)
+        g.drawString("5 $unitLabel", fiveX - fontSize / 2f, textY)
     }
 
     fun calculateStepMm(scalePxPerMm: Float, totalMm: Float): Float {

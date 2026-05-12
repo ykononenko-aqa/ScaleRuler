@@ -12,3 +12,17 @@ data class RulerData(
         const val DEFAULT_HEIGHT_MM = 0.5f
     }
 }
+
+enum class LengthUnit(val label: String) {
+    MM("мм"),
+    CM("см"),
+    M("м"),
+    KM("км")
+}
+
+enum class Corner(val label: String) {
+    TOP_LEFT("↖"),
+    TOP_RIGHT("↗"),
+    BOTTOM_LEFT("↙"),
+    BOTTOM_RIGHT("↘")
+}

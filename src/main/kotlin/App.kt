@@ -9,6 +9,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.ImageBitmap
 import com.ykononenko.logic.*
 import com.ykononenko.model.AppPoints
+import com.ykononenko.model.LengthUnit
 import com.ykononenko.model.RulerData
 import com.ykononenko.state.AppState
 import com.ykononenko.ui.*
@@ -21,6 +22,7 @@ fun App(onExit: () -> Unit = {}) {
     var points by remember { mutableStateOf(AppPoints()) }
     var ruler by remember { mutableStateOf<RulerData?>(null) }
     var canvasSize by remember { mutableStateOf(Size.Zero) }
+    var selectedUnit by remember { mutableStateOf(LengthUnit.MM) }
 
     MaterialTheme {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -31,6 +33,7 @@ fun App(onExit: () -> Unit = {}) {
                         loadedImage = img
                         appState = AppState.PHOTO_LOADED
                         mmText = ""
+                        selectedUnit = LengthUnit.MM  // ← сброс
                         points = AppPoints()
                         ruler = null
                     }
@@ -58,7 +61,6 @@ fun App(onExit: () -> Unit = {}) {
                     )
                 },
                 onCanvasSizeChanged = { canvasSize = it },
-                message = statusMessage(appState),
                 modifier = Modifier.weight(1f)
             )
 
@@ -67,12 +69,16 @@ fun App(onExit: () -> Unit = {}) {
                 mmText = mmText,
                 onMmTextChange = { mmText = it },
                 buttonText = buttonText(appState),
+                selectedUnit = selectedUnit,
+                onUnitChange = { selectedUnit = it },
                 onButtonClick = {
                     when (appState) {
                         AppState.IDLE -> {
                             loadImageFromFile()?.let { img ->
                                 loadedImage = img
                                 appState = AppState.PHOTO_LOADED
+                                mmText = ""
+                                selectedUnit = LengthUnit.MM  // ← сброс
                                 points = AppPoints()
                                 ruler = null
                             }
@@ -109,11 +115,16 @@ fun App(onExit: () -> Unit = {}) {
                         }
                         AppState.RULER_PLACED -> {
                             val img = loadedImage ?: return@BottomBar
-                            saveImageWithDialog(img, ruler)
+                            saveImageWithDialog(img, ruler, selectedUnit)
                         }
                         else -> appState = nextState(appState)
                     }
-                }
+                },
+                onMoveToCorner = { corner ->
+                    val img = loadedImage ?: return@BottomBar
+                    val r = ruler ?: return@BottomBar
+                    ruler = RulerFactory.moveToCorner(r, img, corner)
+                },
             )
         }
     }

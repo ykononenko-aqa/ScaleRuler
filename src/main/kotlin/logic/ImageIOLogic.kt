@@ -2,6 +2,7 @@ package com.ykononenko.logic
 
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
+import com.ykononenko.model.LengthUnit
 import com.ykononenko.model.RulerData
 import org.jetbrains.skia.Image as SkiaImage
 import java.io.File
@@ -28,7 +29,7 @@ fun loadImageFromFile(): ImageBitmap? {
     }
 }
 
-fun saveImageWithDialog(image: ImageBitmap, ruler: RulerData?): Boolean {
+fun saveImageWithDialog(image: ImageBitmap, ruler: RulerData?, unit: LengthUnit): Boolean {
     val chooser = JFileChooser().apply {
         fileFilter = FileNameExtensionFilter("PNG (*.png)", "png")
         selectedFile = File("result.png")
@@ -76,7 +77,7 @@ fun saveImageWithDialog(image: ImageBitmap, ruler: RulerData?): Boolean {
         if (ruler != null) {
             val bufferedImage = javax.imageio.ImageIO.read(out)
             val g = bufferedImage.createGraphics()
-            RulerDrawer.drawLabelsOnAWT(g, ruler)
+            RulerDrawer.drawLabelsOnAWT(g, ruler, unit)
             g.dispose()
             javax.imageio.ImageIO.write(bufferedImage, "png", out)
         }

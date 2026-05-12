@@ -23,14 +23,3 @@ fun buttonText(state: AppState): String {
         AppState.RULER_PLACED -> "Сохранить изображение"
     }
 }
-
-fun statusMessage(state: AppState): String {
-    return when (state) {
-        AppState.IDLE -> "Загрузите фото через меню «Загрузить фото» или кнопку ниже"
-        AppState.PHOTO_LOADED -> "Фото загружено. Нажмите кнопку для перехода в режим расстановки точек"
-        AppState.AWAITING_POINT_1 -> "Кликните по фото и нажмите «Сохранить первую точку»"
-        AppState.AWAITING_POINT_2 -> "Кликните по фото и нажмите «Сохранить вторую точку»"
-        AppState.POINTS_SET -> "Введите расстояние в мм и нажмите «Рассчитать и вывести линейку»"
-        AppState.RULER_PLACED -> "Линейка размещена. Перетащите её и нажмите «Сохранить изображение»"
-    }
-}
