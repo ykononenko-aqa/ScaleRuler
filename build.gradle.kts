@@ -25,7 +25,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Msi, TargetFormat.Dmg, TargetFormat.Deb)
             packageName = "ScaleRuler"
-            packageVersion = "1.0.1"
+            packageVersion = "1.0.2"
         }
     }
 }
