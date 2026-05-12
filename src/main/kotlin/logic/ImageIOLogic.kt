@@ -40,48 +40,8 @@ fun saveImageWithDialog(image: ImageBitmap, ruler: RulerData?, unit: LengthUnit)
     val out = if (file.extension.isBlank()) File("${file.absolutePath}.png") else file
 
     return try {
-        val w = image.width
-        val h = image.height
-
-        // Создаём Skia Surface и рисуем на нём
-        val surface = org.jetbrains.skia.Surface.makeRasterN32Premul(w, h)
-        val canvas = surface.canvas
-
-        // Рисуем исходное изображение
-        val imagePixels = IntArray(w * h)
-        image.readPixels(imagePixels)
-        val skBitmap = org.jetbrains.skia.Bitmap()
-        skBitmap.allocPixels(org.jetbrains.skia.ImageInfo.makeS32(w, h, org.jetbrains.skia.ColorAlphaType.PREMUL))
-        val imageBytes = ByteArray(w * h * 4)
-        for (i in imagePixels.indices) {
-            val c = imagePixels[i]
-            imageBytes[i * 4] = (c and 0xFF).toByte()
-            imageBytes[i * 4 + 1] = ((c shr 8) and 0xFF).toByte()
-            imageBytes[i * 4 + 2] = ((c shr 16) and 0xFF).toByte()
-            imageBytes[i * 4 + 3] = ((c shr 24) and 0xFF).toByte()
-        }
-        skBitmap.installPixels(skBitmap.imageInfo, imageBytes, w * 4)
-        canvas.drawImage(org.jetbrains.skia.Image.makeFromBitmap(skBitmap), 0f, 0f)
-
-        // Рисуем линейку (блоки)
-        if (ruler != null) {
-            RulerDrawer.drawOnSkiaCanvas(canvas, ruler)
-        }
-
-        // Сохраняем в PNG
-        val resultImage = surface.makeImageSnapshot()
-        val encoded = resultImage.encodeToData(org.jetbrains.skia.EncodedImageFormat.PNG, 100)
-        out.writeBytes(encoded?.bytes ?: throw Exception("Failed to encode image"))
-
-        // Дорисовываем подписи через AWT
-        if (ruler != null) {
-            val bufferedImage = javax.imageio.ImageIO.read(out)
-            val g = bufferedImage.createGraphics()
-            RulerDrawer.drawLabelsOnAWT(g, ruler, unit)
-            g.dispose()
-            javax.imageio.ImageIO.write(bufferedImage, "png", out)
-        }
-
+        val surface = ImageConverter.bitmapToSurface(image, ruler)
+        ImageConverter.surfaceToFile(surface, out, ruler ?: return false, unit)
         true
     } catch (e: Exception) {
         e.printStackTrace()

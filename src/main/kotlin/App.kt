@@ -8,9 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.ImageBitmap
 import com.ykononenko.logic.*
-import com.ykononenko.model.AppPoints
-import com.ykononenko.model.LengthUnit
-import com.ykononenko.model.RulerData
+import com.ykononenko.model.*
 import com.ykononenko.state.AppState
 import com.ykononenko.ui.*
 
@@ -34,7 +32,7 @@ fun App(onExit: () -> Unit = {}) {
                         loadedImage = img
                         appState = AppState.PHOTO_LOADED
                         mmText = ""
-                        selectedUnit = LengthUnit.MM  // ← сброс
+                        selectedUnit = LengthUnit.MM
                         points = AppPoints()
                         ruler = null
                     }
@@ -72,14 +70,19 @@ fun App(onExit: () -> Unit = {}) {
                 buttonText = buttonText(appState),
                 selectedUnit = selectedUnit,
                 onUnitChange = { selectedUnit = it },
+                onMoveToCorner = { corner ->
+                    val img = loadedImage ?: return@BottomBar
+                    val r = ruler ?: return@BottomBar
+                    ruler = RulerFactory.moveToCorner(r, img, corner)
+                },
+                onBatchClick = { showBatchDialog = true },
                 onButtonClick = {
                     when (appState) {
                         AppState.IDLE -> {
                             loadImageFromFile()?.let { img ->
                                 loadedImage = img
                                 appState = AppState.PHOTO_LOADED
-                                mmText = ""
-                                selectedUnit = LengthUnit.MM  // ← сброс
+                                selectedUnit = LengthUnit.MM
                                 points = AppPoints()
                                 ruler = null
                             }
@@ -120,15 +123,10 @@ fun App(onExit: () -> Unit = {}) {
                         }
                         else -> appState = nextState(appState)
                     }
-                },
-                onMoveToCorner = { corner ->
-                    val img = loadedImage ?: return@BottomBar
-                    val r = ruler ?: return@BottomBar
-                    ruler = RulerFactory.moveToCorner(r, img, corner)
-                },
-                onBatchClick = { showBatchDialog = true },
+                }
             )
         }
+
         if (showBatchDialog && ruler != null) {
             BatchDialog(
                 ruler = ruler!!,

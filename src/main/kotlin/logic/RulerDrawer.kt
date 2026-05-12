@@ -88,32 +88,29 @@ object RulerDrawer {
 
     private fun calculateBlocks(
         ruler: RulerData,
-        scale: Float,  // для drawOnCanvas = layout.scale, для drawOnSkiaCanvas = 1f
+        scale: Float,
         offsetX: Float = 0f,
         offsetY: Float = 0f
     ): List<Block> {
-        val rw = ruler.lengthMm * ruler.scalePxPerMm * scale
         val rh = ruler.heightMm * ruler.scalePxPerMm * scale
 
         val stepMm = calculateStepMm(ruler.scalePxPerMm * scale, ruler.lengthMm)
         val stepPx = stepMm * ruler.scalePxPerMm * scale
 
         val blocks = mutableListOf<Block>()
-        var x = 0f
-        var blockIndex = 0
+        val blocksCount = (ruler.lengthMm / stepMm).toInt()
 
-        while (x < rw) {
+        for (i in 0 until blocksCount) {
+            val x = i * stepPx
             blocks.add(
                 Block(
                     left = offsetX + x,
                     top = offsetY,
                     width = stepPx,
                     height = rh,
-                    isBlack = blockIndex % 2 != 0
+                    isBlack = i % 2 != 0
                 )
             )
-            x += stepPx
-            blockIndex++
         }
         return blocks
     }
