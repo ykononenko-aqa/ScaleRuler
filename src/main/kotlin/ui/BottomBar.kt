@@ -21,7 +21,8 @@ fun BottomBar(
     buttonText: String,
     selectedUnit: LengthUnit,
     onUnitChange: (LengthUnit) -> Unit,
-    onMoveToCorner: (Corner) -> Unit,  // ← новый
+    onMoveToCorner: (Corner) -> Unit,
+    onBatchClick: () -> Unit,  // ← новый
     onButtonClick: () -> Unit
 ) {
     Row(
@@ -87,6 +88,12 @@ fun BottomBar(
                 }
             }
             Spacer(Modifier.width(8.dp))
+            Button(
+                onClick = onBatchClick,
+                modifier = Modifier.height(48.dp)
+            ) {
+                Text("Пакетная обработка")
+            }
         }
 
         Button(

@@ -23,6 +23,7 @@ fun App(onExit: () -> Unit = {}) {
     var ruler by remember { mutableStateOf<RulerData?>(null) }
     var canvasSize by remember { mutableStateOf(Size.Zero) }
     var selectedUnit by remember { mutableStateOf(LengthUnit.MM) }
+    var showBatchDialog by remember { mutableStateOf(false) }
 
     MaterialTheme {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -125,6 +126,14 @@ fun App(onExit: () -> Unit = {}) {
                     val r = ruler ?: return@BottomBar
                     ruler = RulerFactory.moveToCorner(r, img, corner)
                 },
+                onBatchClick = { showBatchDialog = true },
+            )
+        }
+        if (showBatchDialog && ruler != null) {
+            BatchDialog(
+                ruler = ruler!!,
+                unit = selectedUnit,
+                onDismiss = { showBatchDialog = false }
             )
         }
     }
