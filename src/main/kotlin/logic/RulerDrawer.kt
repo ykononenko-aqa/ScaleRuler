@@ -59,17 +59,25 @@ object RulerDrawer {
         val fontSize = (rh * 0.6f).coerceIn(10f, 36f)
         val stepMm = calculateStepMm(ruler.scalePxPerMm, ruler.lengthMm)
         val stepPx = stepMm * ruler.scalePxPerMm
-        val textY = ruler.y + rh - 2f
         val unitLabel = unit.label
+        val textY = ruler.y + rh - 2f  // внутри линейки, у нижнего края
 
         g.font = java.awt.Font("SansSerif", java.awt.Font.BOLD, fontSize.toInt())
         g.color = java.awt.Color.BLACK
 
-        val oneX = ruler.x + stepPx
-        g.drawString("1 $unitLabel", oneX - fontSize / 2f, textY)
+        val metrics = g.fontMetrics
 
-        val fiveX = ruler.x + 5f * stepPx
-        g.drawString("5 $unitLabel", fiveX - fontSize / 2f, textY)
+        // "1" — внутри первой ячейки, прижата к правому краю
+        val oneText = "1"
+        val oneWidth = metrics.stringWidth(oneText)
+        val oneX = ruler.x + stepPx - oneWidth - 1f
+        g.drawString(oneText, oneX, textY)
+
+        // "5 см" — внутри пятой ячейки, прижата к правому краю
+        val fiveText = "5 $unitLabel"
+        val fiveWidth = metrics.stringWidth(fiveText)
+        val fiveX = ruler.x + 5f * stepPx - fiveWidth - 1f
+        g.drawString(fiveText, fiveX, textY)
     }
 
     fun calculateStepMm(scalePxPerMm: Float, totalMm: Float): Float {

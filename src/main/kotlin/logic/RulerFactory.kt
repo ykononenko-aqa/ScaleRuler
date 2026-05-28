@@ -11,12 +11,10 @@ object RulerFactory {
     fun create(image: ImageBitmap, scalePxPerMm: Float): RulerData {
         val lengthPx = RulerData.DEFAULT_LENGTH_MM * scalePxPerMm
         val heightPx = RulerData.DEFAULT_HEIGHT_MM * scalePxPerMm
-        val fontSize = labelFontSize(heightPx)
-        val bottomMargin = fontSize + 4f
 
         return RulerData(
             x = image.width - lengthPx - MARGIN,
-            y = image.height - heightPx - bottomMargin - MARGIN,
+            y = image.height - heightPx - MARGIN,
             scalePxPerMm = scalePxPerMm
         )
     }
@@ -24,8 +22,6 @@ object RulerFactory {
     fun moveToCorner(ruler: RulerData, image: ImageBitmap, corner: Corner): RulerData {
         val lengthPx = ruler.lengthMm * ruler.scalePxPerMm
         val heightPx = ruler.heightMm * ruler.scalePxPerMm
-        val fontSize = labelFontSize(heightPx)
-        val bottomMargin = fontSize + 4f
 
         val x = when (corner) {
             Corner.TOP_LEFT, Corner.BOTTOM_LEFT -> MARGIN
@@ -33,13 +29,31 @@ object RulerFactory {
         }
         val y = when (corner) {
             Corner.TOP_LEFT, Corner.TOP_RIGHT -> MARGIN
-            Corner.BOTTOM_LEFT, Corner.BOTTOM_RIGHT -> image.height - heightPx - bottomMargin - MARGIN
+            Corner.BOTTOM_LEFT, Corner.BOTTOM_RIGHT -> image.height - heightPx - MARGIN
         }
 
         return ruler.copy(x = x, y = y)
     }
 
-    private fun labelFontSize(heightPx: Float): Float {
-        return (heightPx * 0.6f).coerceIn(10f, 36f)
+    fun fitToImage(ruler: RulerData, imageWidth: Int, imageHeight: Int): RulerData {
+        val lengthPx = ruler.lengthMm * ruler.scalePxPerMm
+        val heightPx = ruler.heightMm * ruler.scalePxPerMm
+
+        val x = when {
+            ruler.x + lengthPx + MARGIN > imageWidth -> (imageWidth - lengthPx - MARGIN).coerceAtLeast(MARGIN)
+            ruler.x < MARGIN -> MARGIN
+            else -> ruler.x
+        }
+
+        val y = when {
+            ruler.y + heightPx + MARGIN > imageHeight -> (imageHeight - heightPx - MARGIN).coerceAtLeast(
+                MARGIN
+            )
+            ruler.y < MARGIN -> MARGIN
+            else -> ruler.y
+        }
+
+        return ruler.copy(x = x, y = y)
     }
+
 }
