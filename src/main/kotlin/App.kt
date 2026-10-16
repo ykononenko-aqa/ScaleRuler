@@ -12,6 +12,16 @@ import com.ykononenko.model.*
 import com.ykononenko.state.AppState
 import com.ykononenko.ui.*
 
+/**
+ * Корневой composable приложения.
+ *
+ * Единая точка сборки: всё изменяемое состояние хранится здесь через
+ * `remember { mutableStateOf(...) }` и передаётся вниз в панели и область Canvas.
+ * Здесь же обрабатываются действия пользователя и переходы между состояниями
+ * [AppState].
+ *
+ * @param onExit обработчик выхода из приложения
+ */
 @Composable
 fun App(onExit: () -> Unit = {}) {
     var appState by remember { mutableStateOf(AppState.IDLE) }
@@ -45,6 +55,7 @@ fun App(onExit: () -> Unit = {}) {
                 image = loadedImage,
                 points = points,
                 ruler = ruler,
+                unit = selectedUnit,
                 onCanvasClick = { offset ->
                     if (appState == AppState.AWAITING_POINT_1 || appState == AppState.AWAITING_POINT_2) {
                         points = points.copy(tempMarker = offset)

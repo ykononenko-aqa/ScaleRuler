@@ -12,6 +12,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+/**
+ * Верхняя панель с заголовком и кнопками загрузки фото и выхода.
+ *
+ * @param onLoadPhoto обработчик загрузки фотографии
+ * @param onExit обработчик выхода из приложения
+ */
 @Composable
 fun TopBar(
     onLoadPhoto: () -> Unit,

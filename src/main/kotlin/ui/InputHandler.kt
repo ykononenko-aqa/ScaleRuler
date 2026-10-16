@@ -5,6 +5,18 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import com.ykononenko.state.AppState
 
+/**
+ * Подключает обработку ввода к Canvas в зависимости от текущего состояния.
+ *
+ * В состояниях [AppState.AWAITING_POINT_1] и [AppState.AWAITING_POINT_2]
+ * обрабатываются одиночные тапы (постановка точек), в состоянии
+ * [AppState.RULER_PLACED] — перетаскивание (перемещение линейки).
+ *
+ * @param appState текущее состояние сценария
+ * @param onClick обработчик тапа в координатах Canvas
+ * @param onDrag обработчик перетаскивания; принимает смещение в координатах Canvas
+ * @return модификатор с подключённым вводом
+ */
 fun androidx.compose.ui.Modifier.canvasInput(
     appState: AppState,
     onClick: (Offset) -> Unit,

@@ -13,20 +13,41 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.layout.onSizeChanged
 import com.ykononenko.logic.RulerDrawer
 import com.ykononenko.model.AppPoints
+import com.ykononenko.model.LengthUnit
 import com.ykononenko.model.RulerData
 import com.ykononenko.state.AppState
 
+/**
+ * Центральная область приложения: изображение, расставленные точки и линейка.
+ *
+ * Здесь обрабатываются клики по Canvas (постановка точек) и перетаскивание
+ * линейки. Все координаты хранятся в пикселях изображения и конвертируются через
+ * [calculateImageLayout] / [canvasToImage] / [imageToCanvas].
+ *
+ * @param appState текущее состояние сценария
+ * @param image загруженное изображение или `null`
+ * @param points расставленные точки
+ * @param ruler линейка или `null`
+ * @param unit единица измерения для подписей линейки
+ * @param onCanvasClick обработчик клика по Canvas в координатах Canvas
+ * @param onRulerDrag обработчик перетаскивания линейки (смещение в координатах Canvas)
+ * @param onCanvasSizeChanged уведомление об изменении размера области Canvas
+ * @param modifier модификатор внешней компоновки
+ */
 @Composable
 fun MainArea(
     appState: AppState,
     image: ImageBitmap?,
     points: AppPoints,
     ruler: RulerData?,
+    unit: LengthUnit,
     onCanvasClick: (Offset) -> Unit,
     onRulerDrag: (Offset) -> Unit,
     onCanvasSizeChanged: (Size) -> Unit,
@@ -58,13 +79,24 @@ fun MainArea(
                     currentLayout = layout
                     drawImageScaled(image, layout)
                     drawPoints(points, layout)
-                    ruler?.let { RulerDrawer.drawOnCanvas(this, it, layout) }
+                    ruler?.let {
+                        val pos = imageToCanvas(Offset(it.x, it.y), layout)
+                        drawIntoCanvas { canvas ->
+                            RulerDrawer.draw(canvas.nativeCanvas, it, layout.scale, pos.x, pos.y, unit)
+                        }
+                    }
                 }
             }
         }
     }
 }
 
+/**
+ * Рисует изображение с учётом рассчитанной геометрии отображения.
+ *
+ * @param image отображаемое изображение
+ * @param layout геометрия отображения
+ */
 private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawImageScaled(
     image: ImageBitmap,
     layout: ImageLayout
@@ -80,6 +112,12 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawImageScaled(
     }
 }
 
+/**
+ * Рисует маркеры расставленных точек.
+ *
+ * @param points точки в координатах изображения
+ * @param layout геометрия отображения для перевода в координаты Canvas
+ */
 private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPoints(
     points: AppPoints,
     layout: ImageLayout
@@ -89,6 +127,11 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPoints(
     points.tempMarker?.let { drawMarker(it) }
 }
 
+/**
+ * Рисует маркер одной точки в виде перекрестия.
+ *
+ * @param center центр маркера в координатах Canvas
+ */
 private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawMarker(center: Offset) {
     drawCircle(color = Color.Green.copy(alpha = 0.3f), radius = 12f, center = center)
     drawCircle(color = Color.Green, radius = 12f, center = center, style = Stroke(width = 2f))

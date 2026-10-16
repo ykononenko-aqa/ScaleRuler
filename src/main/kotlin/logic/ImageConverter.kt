@@ -2,33 +2,63 @@ package com.ykononenko.logic
 
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
+import com.ykononenko.model.LengthUnit
+import com.ykononenko.model.RulerData
 import org.jetbrains.skia.Image as SkiaImage
 import org.jetbrains.skia.Surface
 import org.jetbrains.skia.Bitmap
 import org.jetbrains.skia.ImageInfo
 import org.jetbrains.skia.ColorAlphaType
-import javax.imageio.ImageIO
 import java.io.File
 
+/**
+ * Конвертация изображений через Skia: подготовка поверхности для рисования и
+ * сохранение результата в PNG.
+ */
 object ImageConverter {
 
-    fun fileToSurface(file: File, ruler: com.ykononenko.model.RulerData): Surface? {
+    /**
+     * Читает файл изображения и возвращает поверхность с уже нанесённой линейкой.
+     *
+     * @param file файл изображения (JPG/PNG/BMP)
+     * @param ruler линейка, положение которой задано в пикселях этого изображения
+     * @param unit единица измерения для подписей линейки
+     * @return готовая к сохранению [Surface] или `null` при ошибке чтения
+     */
+    fun fileToSurface(file: File, ruler: RulerData, unit: LengthUnit): Surface? {
         return try {
             val bytes = file.readBytes()
             val skiaImage = SkiaImage.makeFromEncoded(bytes)
             val image = skiaImage.toComposeImageBitmap()
-            imageToSurface(image, ruler)
+            imageToSurface(image, ruler, unit)
         } catch (e: Exception) {
             e.printStackTrace()
             null
         }
     }
 
-    fun bitmapToSurface(image: ImageBitmap, ruler: com.ykononenko.model.RulerData?): Surface {
-        return imageToSurface(image, ruler)
+    /**
+     * Создаёт поверхность с изображением и, при наличии, нанесённой линейкой.
+     *
+     * @param image исходное изображение
+     * @param ruler линейка для наложения или `null`, чтобы вернуть только изображение
+     * @param unit единица измерения для подписей линейки
+     * @return поверхность в разрешении исходного изображения
+     */
+    fun bitmapToSurface(image: ImageBitmap, ruler: RulerData?, unit: LengthUnit): Surface {
+        return imageToSurface(image, ruler, unit)
     }
 
-    private fun imageToSurface(image: ImageBitmap, ruler: com.ykononenko.model.RulerData?): Surface {
+    /**
+     * Копирует пиксели [ImageBitmap] на растровую Skia-поверхность и при наличии
+     * рисует линейку в масштабе 1:1.
+     *
+     * @param image исходное изображение
+     * @param ruler линейка для наложения или `null`
+     * @param unit единица измерения для подписей линейки
+     * @return растровая поверхность размером с изображение
+     */
+    private fun imageToSurface(image: ImageBitmap, ruler: RulerData?, unit: LengthUnit): Surface {
         val w = image.width
         val h = image.height
         val surface = Surface.makeRasterN32Premul(w, h)
@@ -50,23 +80,23 @@ object ImageConverter {
         canvas.drawImage(SkiaImage.makeFromBitmap(skBitmap), 0f, 0f)
 
         if (ruler != null) {
-            RulerDrawer.drawOnSkiaCanvas(canvas, ruler)
+            RulerDrawer.draw(canvas, ruler, 1f, ruler.x, ruler.y, unit)
         }
 
         return surface
     }
 
-    fun surfaceToFile(surface: Surface, targetFile: File, ruler: com.ykononenko.model.RulerData, unit: com.ykononenko.model.LengthUnit) {
+    /**
+     * Кодирует поверхность в PNG-файл.
+     *
+     * @param surface поверхность с итоговым изображением
+     * @param targetFile файл для записи
+     * @throws Exception если не удалось закодировать изображение
+     */
+    fun surfaceToFile(surface: Surface, targetFile: File) {
         val resultImage = surface.makeImageSnapshot()
         val encoded = resultImage.encodeToData(org.jetbrains.skia.EncodedImageFormat.PNG, 100)
             ?: throw Exception("Failed to encode image")
         targetFile.writeBytes(encoded.bytes)
-
-        // Дорисовываем подписи AWT
-        val bufferedImage = ImageIO.read(targetFile)
-        val g = bufferedImage.createGraphics()
-        RulerDrawer.drawLabelsOnAWT(g, ruler, unit)
-        g.dispose()
-        ImageIO.write(bufferedImage, "png", targetFile)
     }
 }
