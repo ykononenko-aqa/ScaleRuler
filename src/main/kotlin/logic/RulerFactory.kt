@@ -3,6 +3,7 @@ package com.ykononenko.logic
 import androidx.compose.ui.graphics.ImageBitmap
 import com.ykononenko.model.Corner
 import com.ykononenko.model.RulerData
+import com.ykononenko.model.RulerOrientation
 
 /**
  * Фабрика линейки: создание и позиционирование [RulerData] относительно изображения.
@@ -20,14 +21,34 @@ object RulerFactory {
      * @return новая линейка в пиксельных координатах изображения
      */
     fun create(image: ImageBitmap, scalePxPerMm: Float): RulerData {
-        val lengthPx = RulerData.DEFAULT_LENGTH_MM * scalePxPerMm
-        val heightPx = RulerData.DEFAULT_HEIGHT_MM * scalePxPerMm
-
-        return RulerData(
-            x = image.width - lengthPx - MARGIN,
-            y = image.height - heightPx - MARGIN,
+        val ruler = RulerData(
+            x = 0f,
+            y = 0f,
             scalePxPerMm = scalePxPerMm
         )
+
+        return ruler.copy(
+            x = image.width - ruler.boxWidthPx - MARGIN,
+            y = image.height - ruler.boxHeightPx - MARGIN
+        )
+    }
+
+    /**
+     * Переворачивает ориентацию линейки (горизонтальная ↔ вертикальная).
+     *
+     * После смены ориентации габарит линейки меняется, поэтому положение
+     * вписывается в границы изображения через [fitToImage].
+     *
+     * @param ruler текущая линейка
+     * @param image изображение, задающее границы
+     * @return копия линейки с противоположной ориентацией
+     */
+    fun toggleOrientation(ruler: RulerData, image: ImageBitmap): RulerData {
+        val flipped = when (ruler.orientation) {
+            RulerOrientation.HORIZONTAL -> RulerOrientation.VERTICAL
+            RulerOrientation.VERTICAL -> RulerOrientation.HORIZONTAL
+        }
+        return fitToImage(ruler.copy(orientation = flipped), image.width, image.height)
     }
 
     /**
@@ -39,16 +60,13 @@ object RulerFactory {
      * @return копия линейки с новыми координатами
      */
     fun moveToCorner(ruler: RulerData, image: ImageBitmap, corner: Corner): RulerData {
-        val lengthPx = ruler.lengthMm * ruler.scalePxPerMm
-        val heightPx = ruler.heightMm * ruler.scalePxPerMm
-
         val x = when (corner) {
             Corner.TOP_LEFT, Corner.BOTTOM_LEFT -> MARGIN
-            Corner.TOP_RIGHT, Corner.BOTTOM_RIGHT -> image.width - lengthPx - MARGIN
+            Corner.TOP_RIGHT, Corner.BOTTOM_RIGHT -> image.width - ruler.boxWidthPx - MARGIN
         }
         val y = when (corner) {
             Corner.TOP_LEFT, Corner.TOP_RIGHT -> MARGIN
-            Corner.BOTTOM_LEFT, Corner.BOTTOM_RIGHT -> image.height - heightPx - MARGIN
+            Corner.BOTTOM_LEFT, Corner.BOTTOM_RIGHT -> image.height - ruler.boxHeightPx - MARGIN
         }
 
         return ruler.copy(x = x, y = y)
@@ -66,19 +84,16 @@ object RulerFactory {
      * @return копия линейки с координатами, вписанными в границы изображения
      */
     fun fitToImage(ruler: RulerData, imageWidth: Int, imageHeight: Int): RulerData {
-        val lengthPx = ruler.lengthMm * ruler.scalePxPerMm
-        val heightPx = ruler.heightMm * ruler.scalePxPerMm
-
         val x = when {
-            ruler.x + lengthPx + MARGIN > imageWidth -> (imageWidth - lengthPx - MARGIN).coerceAtLeast(MARGIN)
+            ruler.x + ruler.boxWidthPx + MARGIN > imageWidth ->
+                (imageWidth - ruler.boxWidthPx - MARGIN).coerceAtLeast(MARGIN)
             ruler.x < MARGIN -> MARGIN
             else -> ruler.x
         }
 
         val y = when {
-            ruler.y + heightPx + MARGIN > imageHeight -> (imageHeight - heightPx - MARGIN).coerceAtLeast(
-                MARGIN
-            )
+            ruler.y + ruler.boxHeightPx + MARGIN > imageHeight ->
+                (imageHeight - ruler.boxHeightPx - MARGIN).coerceAtLeast(MARGIN)
             ruler.y < MARGIN -> MARGIN
             else -> ruler.y
         }

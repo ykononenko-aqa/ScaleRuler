@@ -11,14 +11,42 @@ package com.ykononenko.model
  * @property scalePxPerMm масштаб — сколько пикселей изображения приходится на один миллиметр
  * @property lengthMm длина линейки в миллиметрах
  * @property heightMm высота линейки в миллиметрах
+ * @property orientation ориентация линейки; при [RulerOrientation.VERTICAL] деления
+ *   идут снизу вверх, а [lengthMm] откладывается по вертикали
  */
 data class RulerData(
     val x: Float,
     val y: Float,
     val scalePxPerMm: Float,
     val lengthMm: Float = DEFAULT_LENGTH_MM,
-    val heightMm: Float = DEFAULT_HEIGHT_MM
+    val heightMm: Float = DEFAULT_HEIGHT_MM,
+    val orientation: RulerOrientation = RulerOrientation.HORIZONTAL
 ) {
+
+    /**
+     * Ширина габаритного прямоугольника линейки в пикселях изображения.
+     *
+     * Для горизонтальной линейки — это длина, для вертикальной — высота.
+     */
+    val boxWidthPx: Float
+        get() = if (orientation == RulerOrientation.HORIZONTAL) {
+            lengthMm * scalePxPerMm
+        } else {
+            heightMm * scalePxPerMm
+        }
+
+    /**
+     * Высота габаритного прямоугольника линейки в пикселях изображения.
+     *
+     * Для горизонтальной линейки — это высота, для вертикальной — длина.
+     */
+    val boxHeightPx: Float
+        get() = if (orientation == RulerOrientation.HORIZONTAL) {
+            heightMm * scalePxPerMm
+        } else {
+            lengthMm * scalePxPerMm
+        }
+
     companion object {
 
         /** Длина линейки по умолчанию в миллиметрах. */
@@ -27,6 +55,18 @@ data class RulerData(
         /** Высота линейки по умолчанию в миллиметрах. */
         const val DEFAULT_HEIGHT_MM = 0.5f
     }
+}
+
+/**
+ * Ориентация линейки на изображении.
+ */
+enum class RulerOrientation {
+
+    /** Горизонтальная линейка, деления слева направо. */
+    HORIZONTAL,
+
+    /** Вертикальная линейка, деления снизу вверх. */
+    VERTICAL
 }
 
 /**
