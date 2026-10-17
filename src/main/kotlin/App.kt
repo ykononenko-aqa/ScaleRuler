@@ -81,6 +81,12 @@ fun App(onExit: () -> Unit = {}) {
                 buttonText = buttonText(appState),
                 selectedUnit = selectedUnit,
                 onUnitChange = { selectedUnit = it },
+                orientation = ruler?.orientation ?: RulerOrientation.HORIZONTAL,
+                onToggleOrientation = {
+                    val img = loadedImage ?: return@BottomBar
+                    val r = ruler ?: return@BottomBar
+                    ruler = RulerFactory.toggleOrientation(r, img)
+                },
                 onMoveToCorner = { corner ->
                     val img = loadedImage ?: return@BottomBar
                     val r = ruler ?: return@BottomBar

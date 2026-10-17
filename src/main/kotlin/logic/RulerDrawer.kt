@@ -2,6 +2,7 @@ package com.ykononenko.logic
 
 import com.ykononenko.model.LengthUnit
 import com.ykononenko.model.RulerData
+import com.ykononenko.model.RulerOrientation
 import org.jetbrains.skia.Canvas as SkiaCanvas
 import org.jetbrains.skia.Color
 import org.jetbrains.skia.Font
@@ -70,8 +71,14 @@ object RulerDrawer {
         unit: LengthUnit
     ) {
         canvas.save()
-        canvas.translate(offsetX, offsetY)
-        canvas.scale(scale, scale)
+        if (ruler.orientation == RulerOrientation.HORIZONTAL) {
+            canvas.translate(offsetX, offsetY)
+            canvas.scale(scale, scale)
+        } else {
+            canvas.translate(offsetX, offsetY + ruler.boxHeightPx * scale)
+            canvas.scale(scale, scale)
+            canvas.rotate(-90f)
+        }
         drawBlocks(canvas, ruler, scale)
         canvas.restore()
         drawLabels(canvas, ruler, unit, scale, offsetX, offsetY)
@@ -164,6 +171,10 @@ object RulerDrawer {
      * вычисляются в пикселях канваса (экрана), а не изображения — иначе на
      * уменьшенном превью подписи становились неразличимо мелкими.
      *
+     * Для вертикальной линейки подписи поворачиваются на 90° и читаются снизу
+     * вверх: начало координат смещается в левый нижний угол габарита, а система
+     * координат поворачивается так же, как при отрисовке клеток.
+     *
      * @param canvas целевой канвас
      * @param ruler геометрия линейки
      * @param unit единица измерения для текста
@@ -179,6 +190,39 @@ object RulerDrawer {
         offsetX: Float,
         offsetY: Float
     ) {
+        canvas.save()
+        if (ruler.orientation == RulerOrientation.VERTICAL) {
+            canvas.translate(offsetX, offsetY + ruler.boxHeightPx * scale)
+            canvas.rotate(-90f)
+            drawLabelsInFrame(canvas, ruler, unit, scale, 0f, 0f)
+        } else {
+            drawLabelsInFrame(canvas, ruler, unit, scale, offsetX, offsetY)
+        }
+        canvas.restore()
+    }
+
+    /**
+     * Рисует подписи в локальной системе координат линейки.
+     *
+     * Ось X локальной системы направлена вдоль длины линейки (для вертикальной
+     * ориентации — вверх), ось Y — поперёк. Начало системы задаётся [originX] и
+     * [originY] в пикселях канваса.
+     *
+     * @param canvas целевой канвас
+     * @param ruler геометрия линейки
+     * @param unit единица измерения для текста
+     * @param scale коэффициент перевода пикселей изображения в пиксели канваса
+     * @param originX координата X начала локальной системы на канвасе
+     * @param originY координата Y начала локальной системы на канвасе
+     */
+    private fun drawLabelsInFrame(
+        canvas: SkiaCanvas,
+        ruler: RulerData,
+        unit: LengthUnit,
+        scale: Float,
+        originX: Float,
+        originY: Float
+    ) {
         val rh = ruler.heightMm * ruler.scalePxPerMm * scale
         val fontSize = (rh * 0.6f).coerceIn(10f, 36f)
         val stepMm = calculateStepMm(ruler.scalePxPerMm, ruler.lengthMm)
@@ -186,13 +230,13 @@ object RulerDrawer {
 
         val font = Font(labelTypeface, fontSize).apply { isEmboldened = true }
         val paint = Paint().apply { color = Color.makeRGB(0, 0, 0) }
-        val baselineY = offsetY + rh - 2f
+        val baselineY = originY + rh - 2f
 
         // "1" — внутри первой ячейки, прижата к правому краю
-        drawLabel(canvas, "1", offsetX + stepPx, baselineY, font, paint)
+        drawLabel(canvas, "1", originX + stepPx, baselineY, font, paint)
 
         // "5 см" — внутри пятой ячейки, прижата к правому краю
-        drawLabel(canvas, "5 ${unit.label}", offsetX + 5f * stepPx, baselineY, font, paint)
+        drawLabel(canvas, "5 ${unit.label}", originX + 5f * stepPx, baselineY, font, paint)
     }
 
     /**
