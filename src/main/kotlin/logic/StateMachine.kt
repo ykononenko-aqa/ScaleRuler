@@ -2,6 +2,12 @@ package com.ykononenko.logic
 
 import com.ykononenko.state.AppState
 
+/**
+ * Возвращает следующее состояние сценария по текущему.
+ *
+ * @param current текущее состояние
+ * @return следующее состояние; из [AppState.RULER_PLACED] остаётся неизменным
+ */
 fun nextState(current: AppState): AppState {
     return when (current) {
         AppState.IDLE -> AppState.PHOTO_LOADED
@@ -13,6 +19,12 @@ fun nextState(current: AppState): AppState {
     }
 }
 
+/**
+ * Возвращает текст основной кнопки для текущего состояния.
+ *
+ * @param state текущее состояние
+ * @return подпись кнопки на русском языке
+ */
 fun buttonText(state: AppState): String {
     return when (state) {
         AppState.IDLE -> "Загрузить фото"

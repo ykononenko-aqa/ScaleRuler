@@ -9,6 +9,16 @@ import java.io.File
 import javax.swing.JFileChooser
 import javax.swing.filechooser.FileNameExtensionFilter
 
+/**
+ * Загрузка изображений из файла и сохранение результата через диалоги выбора файлов.
+ */
+
+/**
+ * Открывает диалог выбора изображения и загружает выбранный файл в [ImageBitmap].
+ *
+ * @return загруженное изображение или `null`, если пользователь отменил выбор
+ *   либо файл не удалось прочитать
+ */
 fun loadImageFromFile(): ImageBitmap? {
     val chooser = JFileChooser().apply {
         fileFilter = FileNameExtensionFilter(
@@ -29,6 +39,14 @@ fun loadImageFromFile(): ImageBitmap? {
     }
 }
 
+/**
+ * Открывает диалог сохранения и записывает изображение вместе с линейкой в PNG.
+ *
+ * @param image исходное изображение
+ * @param ruler линейка для наложения или `null`
+ * @param unit единица измерения для подписей линейки
+ * @return `true`, если файл успешно сохранён; иначе `false`
+ */
 fun saveImageWithDialog(image: ImageBitmap, ruler: RulerData?, unit: LengthUnit): Boolean {
     val chooser = JFileChooser().apply {
         fileFilter = FileNameExtensionFilter("PNG (*.png)", "png")
@@ -40,8 +58,8 @@ fun saveImageWithDialog(image: ImageBitmap, ruler: RulerData?, unit: LengthUnit)
     val out = if (file.extension.isBlank()) File("${file.absolutePath}.png") else file
 
     return try {
-        val surface = ImageConverter.bitmapToSurface(image, ruler)
-        ImageConverter.surfaceToFile(surface, out, ruler ?: return false, unit)
+        val surface = ImageConverter.bitmapToSurface(image, ruler, unit)
+        ImageConverter.surfaceToFile(surface, out)
         true
     } catch (e: Exception) {
         e.printStackTrace()

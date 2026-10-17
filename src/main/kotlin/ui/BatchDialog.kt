@@ -17,6 +17,16 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import javax.swing.JFileChooser
 
+/**
+ * Диалог пакетной обработки: выбор папок и запуск нанесения линейки на все фото.
+ *
+ * Обработка выполняется в фоновом потоке ([Dispatchers.IO]), прогресс
+ * отображается по ходу выполнения.
+ *
+ * @param ruler линейка, задающая масштаб для всех изображений
+ * @param unit единица измерения для подписей линейки
+ * @param onDismiss закрытие диалога
+ */
 @Composable
 fun BatchDialog(
     ruler: RulerData,
@@ -145,6 +155,12 @@ fun BatchDialog(
     }
 }
 
+/**
+ * Открывает системный диалог выбора папки.
+ *
+ * @param title заголовок диалога
+ * @return выбранная папка или `null`, если пользователь отменил выбор
+ */
 private fun chooseDirectory(title: String): File? {
     val chooser = JFileChooser().apply {
         dialogTitle = title

@@ -5,8 +5,29 @@ import com.ykononenko.model.RulerData
 import org.jetbrains.skia.Image as SkiaImage
 import java.io.File
 
+/**
+ * Пакетная обработка: наносит линейку одного масштаба на все изображения папки.
+ *
+ * Все фото должны быть сняты при одинаковых настройках камеры, иначе масштаб
+ * линейки будет неверным.
+ */
 object BatchProcessor {
 
+    /**
+     * Обрабатывает все изображения из [sourceDir] и сохраняет результат в PNG
+     * в [targetDir].
+     *
+     * Для каждого фото линейка подгоняется под его размеры через
+     * [RulerFactory.fitToImage], сохраняя исходный масштаб.
+     *
+     * @param sourceDir папка с исходными изображениями (JPG/JPEG/PNG/BMP)
+     * @param targetDir папка для сохранения результатов
+     * @param ruler линейка, задающая масштаб (для всех фото одинаковый)
+     * @param unit единица измерения для подписей линейки
+     * @param onProgress обратный вызов прогресса: номер текущего файла, всего
+     *   файлов и имя обрабатываемого файла
+     * @return количество успешно обработанных файлов
+     */
     fun process(
         sourceDir: File,
         targetDir: File,
@@ -30,10 +51,10 @@ object BatchProcessor {
                 val adjustedRuler = RulerFactory.fitToImage(ruler, skiaImage.width, skiaImage.height)
 
                 // Отрисовываем с скорректированной линейкой
-                val surface = ImageConverter.fileToSurface(file, adjustedRuler)
+                val surface = ImageConverter.fileToSurface(file, adjustedRuler, unit)
                 if (surface != null) {
                     val targetFile = File(targetDir, file.nameWithoutExtension + ".png")
-                    ImageConverter.surfaceToFile(surface, targetFile, adjustedRuler, unit)
+                    ImageConverter.surfaceToFile(surface, targetFile)
                     successCount++
                 }
             } catch (e: Exception) {

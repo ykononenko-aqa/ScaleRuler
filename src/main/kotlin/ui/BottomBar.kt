@@ -13,6 +13,25 @@ import com.ykononenko.model.Corner
 import com.ykononenko.model.LengthUnit
 import com.ykononenko.state.AppState
 
+/**
+ * Нижняя панель управления.
+ *
+ * Набор элементов зависит от [appState]:
+ * - [AppState.POINTS_SET] — поле ввода реального размера и выбор единицы измерения;
+ * - [AppState.RULER_PLACED] — кнопки перемещения линейки в углы и запуск пакетной
+ *   обработки;
+ * всегда видна основная кнопка действия.
+ *
+ * @param appState текущее состояние сценария
+ * @param mmText текущий текст поля ввода размера
+ * @param onMmTextChange изменение текста поля ввода размера
+ * @param buttonText подпись основной кнопки
+ * @param selectedUnit выбранная единица измерения
+ * @param onUnitChange изменение единицы измерения
+ * @param onMoveToCorner перемещение линейки в выбранный угол
+ * @param onBatchClick открытие диалога пакетной обработки
+ * @param onButtonClick нажатие основной кнопки действия
+ */
 @Composable
 fun BottomBar(
     appState: AppState,
@@ -105,6 +124,12 @@ fun BottomBar(
     }
 }
 
+/**
+ * Маленькая текстовая кнопка для перемещения линейки в угол.
+ *
+ * @param arrow символ-стрелка, отображаемый на кнопке
+ * @param onClick обработчик нажатия
+ */
 @Composable
 private fun SmallCornerButton(arrow: String, onClick: () -> Unit) {
     TextButton(
