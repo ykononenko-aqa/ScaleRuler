@@ -80,7 +80,7 @@ object ImageConverter {
         canvas.drawImage(SkiaImage.makeFromBitmap(skBitmap), 0f, 0f)
 
         if (ruler != null) {
-            RulerDrawer.draw(canvas, ruler, 1f, ruler.x, ruler.y, unit)
+            RulerRenderers.of(ruler.style).draw(canvas, ruler, 1f, ruler.x, ruler.y, unit)
         }
 
         return surface

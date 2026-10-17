@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.sp
 import com.ykononenko.model.Corner
 import com.ykononenko.model.LengthUnit
 import com.ykononenko.model.RulerOrientation
+import com.ykononenko.model.RulerStyle
 import com.ykononenko.state.AppState
 
 /**
@@ -32,6 +33,8 @@ import com.ykononenko.state.AppState
  * @param onUnitChange изменение единицы измерения
  * @param orientation текущая ориентация линейки
  * @param onToggleOrientation переключение ориентации линейки
+ * @param style текущий стиль отрисовки линейки
+ * @param onStyleChange изменение стиля отрисовки линейки
  * @param onMoveToCorner перемещение линейки в выбранный угол
  * @param onBatchClick открытие диалога пакетной обработки
  * @param onButtonClick нажатие основной кнопки действия
@@ -46,6 +49,8 @@ fun BottomBar(
     onUnitChange: (LengthUnit) -> Unit,
     orientation: RulerOrientation,
     onToggleOrientation: () -> Unit,
+    style: RulerStyle,
+    onStyleChange: (RulerStyle) -> Unit,
     onMoveToCorner: (Corner) -> Unit,
     onBatchClick: () -> Unit,  // ← новый
     onButtonClick: () -> Unit
@@ -53,7 +58,7 @@ fun BottomBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(64.dp)
+            .height(72.dp)
             .background(Color(0xFFF5F5F5))
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -120,12 +125,41 @@ fun BottomBar(
                 fontSize = 22.sp
             )
             Spacer(Modifier.width(8.dp))
+
+            // Выпадающий список стилей отрисовки линейки
+            var styleExpanded by remember { mutableStateOf(false) }
+            Box {
+                Button(
+                    onClick = { styleExpanded = true },
+                    modifier = Modifier.height(48.dp)
+                ) {
+                    Text("Стиль")
+                }
+                DropdownMenu(
+                    expanded = styleExpanded,
+                    onDismissRequest = { styleExpanded = false }
+                ) {
+                    RulerStyle.entries.forEach { item ->
+                        DropdownMenuItem(
+                            onClick = {
+                                onStyleChange(item)
+                                styleExpanded = false
+                            }
+                        ) {
+                            Text(if (item == style) "✓  ${item.label}" else "   ${item.label}")
+                        }
+                    }
+                }
+            }
+            Spacer(Modifier.width(8.dp))
+
             Button(
                 onClick = onBatchClick,
                 modifier = Modifier.height(48.dp)
             ) {
                 Text("Пакетная обработка")
             }
+            Spacer(Modifier.width(12.dp))
         }
 
         Button(
@@ -140,6 +174,9 @@ fun BottomBar(
 /**
  * Маленькая кнопка с символом-иконкой (стрелка перемещения в угол, ориентация).
  *
+ * Выполнена в том же стиле, что и остальные кнопки панели: тёмная заливка,
+ * белый символ.
+ *
  * @param arrow символ-стрелка, отображаемый на кнопке
  * @param modifier модификатор размера кнопки
  * @param fontSize размер шрифта символа-стрелки
@@ -152,7 +189,7 @@ private fun SmallIconButton(
     fontSize: TextUnit = 12.sp,
     onClick: () -> Unit
 ) {
-    TextButton(
+    Button(
         onClick = onClick,
         modifier = modifier,
         contentPadding = PaddingValues(0.dp)
