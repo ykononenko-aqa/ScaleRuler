@@ -13,6 +13,7 @@ package com.ykononenko.model
  * @property heightMm высота линейки в миллиметрах
  * @property orientation ориентация линейки; при [RulerOrientation.VERTICAL] деления
  *   идут снизу вверх, а [lengthMm] откладывается по вертикали
+ * @property style стиль отрисовки линейки
  */
 data class RulerData(
     val x: Float,
@@ -20,7 +21,8 @@ data class RulerData(
     val scalePxPerMm: Float,
     val lengthMm: Float = DEFAULT_LENGTH_MM,
     val heightMm: Float = DEFAULT_HEIGHT_MM,
-    val orientation: RulerOrientation = RulerOrientation.HORIZONTAL
+    val orientation: RulerOrientation = RulerOrientation.HORIZONTAL,
+    val style: RulerStyle = RulerStyle.BLOCKS
 ) {
 
     /**
@@ -67,6 +69,23 @@ enum class RulerOrientation {
 
     /** Вертикальная линейка, деления снизу вверх. */
     VERTICAL
+}
+
+/**
+ * Стиль отрисовки линейки.
+ *
+ * @property label подпись стиля, отображаемая пользователю
+ */
+enum class RulerStyle(val label: String) {
+
+    /** Чередующиеся чёрно-белые клетки. */
+    BLOCKS("Клетки"),
+
+    /** Полоса снизу с чёрными зарубками. */
+    BAR_BLACK("Чёрные зарубки"),
+
+    /** Полоса снизу с белыми зарубками. */
+    BAR_WHITE("Белые зарубки")
 }
 
 /**

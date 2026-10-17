@@ -18,7 +18,7 @@ import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.layout.onSizeChanged
-import com.ykononenko.logic.RulerDrawer
+import com.ykononenko.logic.RulerRenderers
 import com.ykononenko.model.AppPoints
 import com.ykononenko.model.LengthUnit
 import com.ykononenko.model.RulerData
@@ -82,7 +82,7 @@ fun MainArea(
                     ruler?.let {
                         val pos = imageToCanvas(Offset(it.x, it.y), layout)
                         drawIntoCanvas { canvas ->
-                            RulerDrawer.draw(canvas.nativeCanvas, it, layout.scale, pos.x, pos.y, unit)
+                            RulerRenderers.of(it.style).draw(canvas.nativeCanvas, it, layout.scale, pos.x, pos.y, unit)
                         }
                     }
                 }

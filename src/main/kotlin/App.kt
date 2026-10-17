@@ -87,6 +87,10 @@ fun App(onExit: () -> Unit = {}) {
                     val r = ruler ?: return@BottomBar
                     ruler = RulerFactory.toggleOrientation(r, img)
                 },
+                style = ruler?.style ?: RulerStyle.BLOCKS,
+                onStyleChange = { selected ->
+                    ruler = ruler?.copy(style = selected)
+                },
                 onMoveToCorner = { corner ->
                     val img = loadedImage ?: return@BottomBar
                     val r = ruler ?: return@BottomBar
