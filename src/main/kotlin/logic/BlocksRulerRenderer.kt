@@ -20,11 +20,11 @@ import org.jetbrains.skia.Rect
 class BlocksRulerRenderer(private val outsideColor: Int) : BaseRulerRenderer() {
 
     /** Подписи, не поместившиеся в ячейку, выносятся за габарит линейки. */
-    protected override val movesOverflowingOutside: Boolean
+    override val movesOverflowingOutside: Boolean
         get() = true
 
     /** Цвет вынесенных за линейку подписей задаётся в конструкторе. */
-    protected override fun outsideLabelColor(): Int = outsideColor
+    override fun outsideLabelColor(): Int = outsideColor
 
     /**
      * Последняя клетка чёрная при чётном количестве клеток — тогда подпись

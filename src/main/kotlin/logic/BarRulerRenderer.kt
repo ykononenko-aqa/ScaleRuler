@@ -25,7 +25,7 @@ class BarRulerRenderer(private val color: Int) : BaseRulerRenderer() {
         get() = color
 
     /** Подписи, не поместившиеся в ячейку, выносятся за габарит линейки. */
-    protected override val movesOverflowingOutside: Boolean
+    override val movesOverflowingOutside: Boolean
         get() = true
 
     override fun drawBody(canvas: SkiaCanvas, ruler: RulerData, scale: Float) {
