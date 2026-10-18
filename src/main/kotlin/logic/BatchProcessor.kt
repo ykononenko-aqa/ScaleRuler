@@ -48,7 +48,7 @@ object BatchProcessor {
                 // Загружаем, чтобы узнать размер
                 val bytes = file.readBytes()
                 val skiaImage = SkiaImage.makeFromEncoded(bytes)
-                val adjustedRuler = RulerFactory.fitToImage(ruler, skiaImage.width, skiaImage.height)
+                val adjustedRuler = RulerFactory.fitToImage(ruler, skiaImage.width, skiaImage.height, unit)
 
                 // Отрисовываем с скорректированной линейкой
                 val surface = ImageConverter.fileToSurface(file, adjustedRuler, unit)

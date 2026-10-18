@@ -93,7 +93,7 @@ fun App(onExit: () -> Unit = {}) {
                 onToggleOrientation = {
                     val img = loadedImage ?: return@BottomBar
                     val r = ruler ?: return@BottomBar
-                    ruler = RulerFactory.toggleOrientation(r, img)
+                    ruler = RulerFactory.toggleOrientation(r, img, selectedUnit)
                 },
                 style = ruler?.style ?: RulerStyle.BLOCKS,
                 onStyleChange = { selected ->
@@ -102,7 +102,7 @@ fun App(onExit: () -> Unit = {}) {
                 onMoveToCorner = { corner ->
                     val img = loadedImage ?: return@BottomBar
                     val r = ruler ?: return@BottomBar
-                    ruler = RulerFactory.moveToCorner(r, img, corner)
+                    ruler = RulerFactory.moveToCorner(r, img, corner, selectedUnit)
                 },
                 onBatchClick = { showBatchDialog = true },
                 onButtonClick = {
@@ -150,7 +150,7 @@ fun App(onExit: () -> Unit = {}) {
                                 p1 != null && p2 != null && img != null
                             ) {
                                 val scalePxPerMm = distanceBetween(p1, p2) / mm
-                                ruler = RulerFactory.create(img, scalePxPerMm, cellCount, scalePerCell)
+                                ruler = RulerFactory.create(img, scalePxPerMm, cellCount, scalePerCell, selectedUnit)
                                 points = AppPoints()
                                 appState = AppState.RULER_PLACED
                             }

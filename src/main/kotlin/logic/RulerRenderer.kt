@@ -14,6 +14,23 @@ import org.jetbrains.skia.TextLine
 import org.jetbrains.skia.Typeface
 
 /**
+ * Выступающие за габарит линейки части подписей в пикселях изображения.
+ *
+ * @property startPx выступ перед началом линейки (влево для горизонтальной
+ *   ориентации, вниз — для вертикальной)
+ * @property endPx выступ за концом линейки (вправо для горизонтальной
+ *   ориентации, вверх — для вертикальной)
+ */
+data class LabelOverflow(val startPx: Float, val endPx: Float) {
+
+    companion object {
+
+        /** Отсутствие выступа. */
+        val NONE = LabelOverflow(0f, 0f)
+    }
+}
+
+/**
  * Отрисовщик линейки в конкретном стиле.
  *
  * Реализации отвечают только за тело линейки ([BaseRulerRenderer.drawBody]);
@@ -42,6 +59,17 @@ interface RulerRenderer {
         offsetY: Float,
         unit: LengthUnit
     )
+
+    /**
+     * Возвращает выступ подписей за габарит линейки в пикселях изображения
+     * (масштаб 1:1). Нужен для позиционирования линейки по углам, чтобы
+     * вынесенные подписи не обрезались краем изображения.
+     *
+     * @param ruler геометрия линейки
+     * @param unit единица измерения для текста подписей
+     * @return выступ перед началом и за концом линейки
+     */
+    fun labelOverflow(ruler: RulerData, unit: LengthUnit): LabelOverflow
 }
 
 /**
@@ -74,6 +102,43 @@ abstract class BaseRulerRenderer : RulerRenderer {
      * различима на фоне последней клетки.
      */
     protected open fun lastDivisionLabelColor(ruler: RulerData): Int = labelColor
+
+    /**
+     * Признак того, что не помещающиеся в ячейку подписи выносятся за габарит
+     * линейки. По умолчанию `false` — подпись остаётся внутри и наезжает на
+     * соседние клетки.
+     */
+    protected open val movesOverflowingOutside: Boolean
+        get() = false
+
+    /**
+     * Цвет подписи, вынесенной за габарит линейки (поверх фотографии, где фон
+     * неизвестен). По умолчанию совпадает с [labelColor].
+     */
+    protected open fun outsideLabelColor(): Int = labelColor
+
+    final override fun labelOverflow(ruler: RulerData, unit: LengthUnit): LabelOverflow {
+        if (!movesOverflowingOutside) return LabelOverflow.NONE
+
+        val rh = ruler.heightMm * ruler.scalePxPerMm
+        val font = Font(labelTypeface, labelFontSize(rh)).apply { isEmboldened = true }
+        val availablePx = if (ruler.cellCount <= 1) {
+            ruler.lengthMm * ruler.scalePxPerMm
+        } else {
+            ruler.scalePerCell * ruler.scalePxPerMm
+        }
+        val fitLimit = availablePx * LABEL_FIT_FRACTION
+
+        val start = if (ruler.cellCount <= 1 || measureWidth(firstLabelText(ruler), font) <= fitLimit) {
+            0f
+        } else {
+            measureWidth(firstLabelText(ruler), font)
+        }
+        val lastWidth = measureWidth(lastLabelText(ruler, unit), font)
+        val end = if (lastWidth > fitLimit) lastWidth else 0f
+
+        return LabelOverflow(start, end)
+    }
 
     final override fun draw(
         canvas: SkiaCanvas,
@@ -191,27 +256,73 @@ abstract class BaseRulerRenderer : RulerRenderer {
         originY: Float
     ) {
         val rh = ruler.heightMm * ruler.scalePxPerMm * scale
-        val fontSize = (rh * 0.6f).coerceIn(10f, 36f)
+        val fontSize = labelFontSize(rh)
         val stepPx = ruler.scalePerCell * ruler.scalePxPerMm * scale
 
         val font = Font(labelTypeface, fontSize).apply { isEmboldened = true }
-        val paint = Paint().apply { color = labelColor }
-        val lastPaint = Paint().apply { color = lastDivisionLabelColor(ruler) }
         val baselineY = originY + rh - 2f
-        val oneShift = fontSize * LABEL_ONE_LEFT_SHIFT_FRACTION
+        val insidePaint = Paint().apply { color = labelColor }
+        val lastInsidePaint = Paint().apply { color = lastDivisionLabelColor(ruler) }
+        val outsidePaint = Paint().apply { color = outsideLabelColor() }
 
         if (ruler.cellCount <= 1) {
             // Единственное деление — подписываем только его, с единицей измерения
-            drawLabel(canvas, "${formatValue(ruler.lengthMm)} ${unit.label}", originX + stepPx, baselineY, font, lastPaint)
+            val text = lastLabelText(ruler, unit)
+            val lastEdgeX = originX + stepPx
+            val availablePx = ruler.lengthMm * ruler.scalePxPerMm * scale
+            if (movesOverflowingOutside && measureWidth(text, font) > availablePx * LABEL_FIT_FRACTION) {
+                drawLabel(canvas, text, lastEdgeX, baselineY, font, outsidePaint, alignLeft = true)
+            } else {
+                drawLabel(canvas, text, lastEdgeX, baselineY, font, lastInsidePaint)
+            }
             return
         }
 
-        // Первое деление — только число, прижато к правому краю и чуть отодвинуто влево
-        drawLabel(canvas, formatValue(ruler.scalePerCell), originX + stepPx - oneShift, baselineY, font, paint)
+        val oneShift = fontSize * LABEL_ONE_LEFT_SHIFT_FRACTION
 
-        // Последнее деление — число с единицей измерения, прижато к правому краю
+        // Первое деление — только число
+        val firstText = firstLabelText(ruler)
+        if (movesOverflowingOutside && measureWidth(firstText, font) > stepPx * LABEL_FIT_FRACTION) {
+            // Не помещается — выносим за левый конец линейки
+            drawLabel(canvas, firstText, originX, baselineY, font, outsidePaint)
+        } else {
+            // Внутри первой ячейки, прижато к правому краю и чуть отодвинуто влево
+            drawLabel(canvas, firstText, originX + stepPx - oneShift, baselineY, font, insidePaint)
+        }
+
+        // Последнее деление — число с единицей измерения
+        val lastText = lastLabelText(ruler, unit)
         val lastEdgeX = originX + ruler.cellCount * stepPx
-        drawLabel(canvas, "${formatValue(ruler.lengthMm)} ${unit.label}", lastEdgeX, baselineY, font, lastPaint)
+        if (movesOverflowingOutside && measureWidth(lastText, font) > stepPx * LABEL_FIT_FRACTION) {
+            // Не помещается — выносим за правый конец линейки
+            drawLabel(canvas, lastText, lastEdgeX, baselineY, font, outsidePaint, alignLeft = true)
+        } else {
+            // Внутри последней ячейки, прижато к правому краю
+            drawLabel(canvas, lastText, lastEdgeX, baselineY, font, lastInsidePaint)
+        }
+    }
+
+    /**
+     * Возвращает размер шрифта подписи по высоте линейки на канвасе.
+     */
+    private fun labelFontSize(rulerHeightPx: Float): Float =
+        (rulerHeightPx * LABEL_FONT_HEIGHT_FRACTION).coerceIn(LABEL_MIN_FONT_PX, LABEL_MAX_FONT_PX)
+
+    /** Текст подписи первого деления — только число, без единицы. */
+    private fun firstLabelText(ruler: RulerData): String = formatValue(ruler.scalePerCell)
+
+    /** Текст подписи последнего деления — число с единицей измерения. */
+    private fun lastLabelText(ruler: RulerData, unit: LengthUnit): String =
+        "${formatValue(ruler.lengthMm)} ${unit.label}"
+
+    /** Ширина строки при заданном шрифте. */
+    private fun measureWidth(text: String, font: Font): Float {
+        val line = TextLine.make(text, font)
+        try {
+            return line.width
+        } finally {
+            line.close()
+        }
     }
 
     /**
@@ -227,21 +338,32 @@ abstract class BaseRulerRenderer : RulerRenderer {
     }
 
     /**
-     * Рисует одну строку текста, прижатую правым краем к [rightEdgeX].
+     * Рисует одну строку текста с привязкой к [anchorX].
      *
-     * Текст формируется через [TextLine] и рисуется по базовой линии [baselineY].
+     * При [alignLeft] текст начинается от [anchorX] и идёт вправо (вынесен за
+     * правый конец линейки), иначе прижимается правым краем к [anchorX].
+     *
+     * @param canvas целевой канвас
+     * @param text текст подписи
+     * @param anchorX координата привязки в пикселях канваса
+     * @param baselineY координата базовой линии
+     * @param font шрифт подписи
+     * @param paint кисть подписи
+     * @param alignLeft `true` — выравнивание по левому краю
      */
     private fun drawLabel(
         canvas: SkiaCanvas,
         text: String,
-        rightEdgeX: Float,
+        anchorX: Float,
         baselineY: Float,
         font: Font,
-        paint: Paint
+        paint: Paint,
+        alignLeft: Boolean = false
     ) {
         val line = TextLine.make(text, font)
         try {
-            canvas.drawTextLine(line, rightEdgeX - line.width - 1f, baselineY, paint)
+            val x = if (alignLeft) anchorX + LABEL_GAP else anchorX - line.width - LABEL_GAP
+            canvas.drawTextLine(line, x, baselineY, paint)
         } finally {
             line.close()
         }
@@ -251,6 +373,21 @@ abstract class BaseRulerRenderer : RulerRenderer {
 
         /** Сдвиг подписи «1» влево как доля размера шрифта. */
         const val LABEL_ONE_LEFT_SHIFT_FRACTION = 0.2f
+
+        /** Доля ширины ячейки, которую может занимать подпись. */
+        const val LABEL_FIT_FRACTION = 0.9f
+
+        /** Размер шрифта подписи как доля высоты линейки. */
+        const val LABEL_FONT_HEIGHT_FRACTION = 0.6f
+
+        /** Минимальный размер шрифта подписи в пикселях канваса. */
+        const val LABEL_MIN_FONT_PX = 10f
+
+        /** Максимальный размер шрифта подписи в пикселях канваса. */
+        const val LABEL_MAX_FONT_PX = 36f
+
+        /** Зазор между текстом и границей деления в пикселях канваса. */
+        const val LABEL_GAP = 1f
     }
 }
 
@@ -261,8 +398,11 @@ abstract class BaseRulerRenderer : RulerRenderer {
  */
 object RulerRenderers {
 
-    /** Рендерер чередующихся чёрно-белых клеток. */
-    private val blocks = BlocksRulerRenderer
+    /** Рендерер чередующихся чёрно-белых клеток с чёрными подписями за линейкой. */
+    private val blocks = BlocksRulerRenderer(Color.makeRGB(0, 0, 0))
+
+    /** Рендерер чередующихся чёрно-белых клеток с белыми подписями за линейкой. */
+    private val blocksWhiteLabels = BlocksRulerRenderer(Color.makeRGB(255, 255, 255))
 
     /** Рендерер полосы снизу с чёрными зарубками. */
     private val barBlack = BarRulerRenderer(Color.makeRGB(0, 0, 0))
@@ -278,6 +418,7 @@ object RulerRenderers {
      */
     fun of(style: RulerStyle): RulerRenderer = when (style) {
         RulerStyle.BLOCKS -> blocks
+        RulerStyle.BLOCKS_WHITE_LABELS -> blocksWhiteLabels
         RulerStyle.BAR_BLACK -> barBlack
         RulerStyle.BAR_WHITE -> barWhite
     }

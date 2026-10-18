@@ -13,6 +13,9 @@ import org.jetbrains.skia.Rect
  * ориентира, остальные — короче. Цвет полосы и зарубок задаётся в конструкторе
  * (чёрный или белый), поэтому один класс покрывает оба новых стиля.
  *
+ * Не помещающиеся в ячейку подписи выносятся за габарит линейки тем же цветом,
+ * что и полоса.
+ *
  * @param color цвет полосы и зарубок в формате Skia (см. `Color.makeRGB`)
  */
 class BarRulerRenderer(private val color: Int) : BaseRulerRenderer() {
@@ -20,6 +23,10 @@ class BarRulerRenderer(private val color: Int) : BaseRulerRenderer() {
     /** Подписи рисуются тем же цветом, что полоса и зарубки. */
     override val labelColor: Int
         get() = color
+
+    /** Подписи, не поместившиеся в ячейку, выносятся за габарит линейки. */
+    protected override val movesOverflowingOutside: Boolean
+        get() = true
 
     override fun drawBody(canvas: SkiaCanvas, ruler: RulerData, scale: Float) {
         val rh = ruler.heightMm * ruler.scalePxPerMm

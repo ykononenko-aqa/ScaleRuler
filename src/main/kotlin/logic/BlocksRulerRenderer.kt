@@ -11,9 +11,20 @@ import org.jetbrains.skia.Rect
  * Рендерер линейки в стиле чередующихся чёрно-белых клеток.
  *
  * Рисует тело линейки одним Skia-проходом; подписи и трансформации выполняет
- * [BaseRulerRenderer].
+ * [BaseRulerRenderer]. Не помещающиеся в ячейку подписи выносятся за габарит
+ * линейки; их цвет задаётся в конструкторе (чёрный или белый), потому что фон
+ * фотографии за линейкой неизвестен.
+ *
+ * @param outsideColor цвет подписей, вынесенных за габарит линейки
  */
-object BlocksRulerRenderer : BaseRulerRenderer() {
+class BlocksRulerRenderer(private val outsideColor: Int) : BaseRulerRenderer() {
+
+    /** Подписи, не поместившиеся в ячейку, выносятся за габарит линейки. */
+    protected override val movesOverflowingOutside: Boolean
+        get() = true
+
+    /** Цвет вынесенных за линейку подписей задаётся в конструкторе. */
+    protected override fun outsideLabelColor(): Int = outsideColor
 
     /**
      * Последняя клетка чёрная при чётном количестве клеток — тогда подпись
