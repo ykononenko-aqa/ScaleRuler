@@ -18,13 +18,22 @@ object RulerFactory {
      *
      * @param image изображение, относительно которого размещается линейка
      * @param scalePxPerMm масштаб — пикселей изображения на миллиметр
+     * @param cellCount количество ячеек линейки
+     * @param scalePerCell сколько единиц измерения приходится на одну ячейку
      * @return новая линейка в пиксельных координатах изображения
      */
-    fun create(image: ImageBitmap, scalePxPerMm: Float): RulerData {
+    fun create(
+        image: ImageBitmap,
+        scalePxPerMm: Float,
+        cellCount: Int = RulerData.DEFAULT_CELL_COUNT,
+        scalePerCell: Float = RulerData.DEFAULT_SCALE_PER_CELL
+    ): RulerData {
         val ruler = RulerData(
             x = 0f,
             y = 0f,
-            scalePxPerMm = scalePxPerMm
+            scalePxPerMm = scalePxPerMm,
+            cellCount = cellCount,
+            scalePerCell = scalePerCell
         )
 
         return ruler.copy(

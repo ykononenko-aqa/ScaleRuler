@@ -20,7 +20,8 @@ import com.ykononenko.state.AppState
  * Нижняя панель управления.
  *
  * Набор элементов зависит от [appState]:
- * - [AppState.POINTS_SET] — поле ввода реального размера и выбор единицы измерения;
+ * - [AppState.POINTS_SET] — поле ввода реального размера, выбор единицы измерения,
+ *   количество ячеек и цену деления (единиц на ячейку);
  * - [AppState.RULER_PLACED] — кнопки перемещения линейки в углы, переключение
  *   ориентации (горизонтальная/вертикальная) и запуск пакетной обработки;
  * всегда видна основная кнопка действия.
@@ -28,6 +29,10 @@ import com.ykononenko.state.AppState
  * @param appState текущее состояние сценария
  * @param mmText текущий текст поля ввода размера
  * @param onMmTextChange изменение текста поля ввода размера
+ * @param cellCountText текущий текст поля ввода количества ячеек
+ * @param onCellCountTextChange изменение текста поля ввода количества ячеек
+ * @param scaleText текущий текст поля ввода цены деления
+ * @param onScaleTextChange изменение текста поля ввода цены деления
  * @param buttonText подпись основной кнопки
  * @param selectedUnit выбранная единица измерения
  * @param onUnitChange изменение единицы измерения
@@ -44,6 +49,10 @@ fun BottomBar(
     appState: AppState,
     mmText: String,
     onMmTextChange: (String) -> Unit,
+    cellCountText: String,
+    onCellCountTextChange: (String) -> Unit,
+    scaleText: String,
+    onScaleTextChange: (String) -> Unit,
     buttonText: String,
     selectedUnit: LengthUnit,
     onUnitChange: (LengthUnit) -> Unit,
@@ -102,6 +111,37 @@ fun BottomBar(
                     }
                 }
             }
+
+            Spacer(Modifier.width(12.dp))
+
+            Text("Ячеек: ", fontSize = 14.sp)
+            Spacer(Modifier.width(8.dp))
+            OutlinedTextField(
+                value = cellCountText,
+                onValueChange = { newValue ->
+                    if (newValue.isEmpty() || newValue.matches(Regex("^\\d*$"))) {
+                        onCellCountTextChange(newValue)
+                    }
+                },
+                modifier = Modifier.width(60.dp).height(48.dp),
+                singleLine = true,
+                textStyle = androidx.compose.ui.text.TextStyle(fontSize = 14.sp)
+            )
+            Spacer(Modifier.width(12.dp))
+
+            Text("Цена деления: ", fontSize = 14.sp)
+            Spacer(Modifier.width(8.dp))
+            OutlinedTextField(
+                value = scaleText,
+                onValueChange = { newValue ->
+                    if (newValue.isEmpty() || newValue.matches(Regex("^\\d*\\.?\\d*$"))) {
+                        onScaleTextChange(newValue)
+                    }
+                },
+                modifier = Modifier.width(70.dp).height(48.dp),
+                singleLine = true,
+                textStyle = androidx.compose.ui.text.TextStyle(fontSize = 14.sp)
+            )
 
             Spacer(Modifier.width(12.dp))
         }

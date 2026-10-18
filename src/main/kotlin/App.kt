@@ -26,6 +26,8 @@ import com.ykononenko.ui.*
 fun App(onExit: () -> Unit = {}) {
     var appState by remember { mutableStateOf(AppState.IDLE) }
     var mmText by remember { mutableStateOf("") }
+    var cellCountText by remember { mutableStateOf("5") }
+    var scaleText by remember { mutableStateOf("1") }
     var loadedImage by remember { mutableStateOf<ImageBitmap?>(null) }
     var points by remember { mutableStateOf(AppPoints()) }
     var ruler by remember { mutableStateOf<RulerData?>(null) }
@@ -42,6 +44,8 @@ fun App(onExit: () -> Unit = {}) {
                         loadedImage = img
                         appState = AppState.PHOTO_LOADED
                         mmText = ""
+                        cellCountText = "5"
+                        scaleText = "1"
                         selectedUnit = LengthUnit.MM
                         points = AppPoints()
                         ruler = null
@@ -78,6 +82,10 @@ fun App(onExit: () -> Unit = {}) {
                 appState = appState,
                 mmText = mmText,
                 onMmTextChange = { mmText = it },
+                cellCountText = cellCountText,
+                onCellCountTextChange = { cellCountText = it },
+                scaleText = scaleText,
+                onScaleTextChange = { scaleText = it },
                 buttonText = buttonText(appState),
                 selectedUnit = selectedUnit,
                 onUnitChange = { selectedUnit = it },
@@ -103,6 +111,9 @@ fun App(onExit: () -> Unit = {}) {
                             loadImageFromFile()?.let { img ->
                                 loadedImage = img
                                 appState = AppState.PHOTO_LOADED
+                                mmText = ""
+                                cellCountText = "5"
+                                scaleText = "1"
                                 selectedUnit = LengthUnit.MM
                                 points = AppPoints()
                                 ruler = null
@@ -128,12 +139,18 @@ fun App(onExit: () -> Unit = {}) {
                         }
                         AppState.POINTS_SET -> {
                             val mm = mmText.toFloatOrNull()
+                            val cellCount = cellCountText.toIntOrNull()
+                            val scalePerCell = scaleText.toFloatOrNull()
                             val p1 = points.point1
                             val p2 = points.point2
                             val img = loadedImage
-                            if (mm != null && mm > 0 && p1 != null && p2 != null && img != null) {
+                            if (mm != null && mm > 0 &&
+                                cellCount != null && cellCount >= 1 &&
+                                scalePerCell != null && scalePerCell > 0 &&
+                                p1 != null && p2 != null && img != null
+                            ) {
                                 val scalePxPerMm = distanceBetween(p1, p2) / mm
-                                ruler = RulerFactory.create(img, scalePxPerMm)
+                                ruler = RulerFactory.create(img, scalePxPerMm, cellCount, scalePerCell)
                                 points = AppPoints()
                                 appState = AppState.RULER_PLACED
                             }
