@@ -9,7 +9,8 @@ package com.ykononenko.model
  * @property x координата X левого верхнего угла линейки в пикселях изображения
  * @property y координата Y левого верхнего угла линейки в пикселях изображения
  * @property scalePxPerMm масштаб — сколько пикселей изображения приходится на один миллиметр
- * @property lengthMm длина линейки в миллиметрах
+ * @property cellCount количество ячеек (делений) линейки
+ * @property scalePerCell сколько единиц измерения приходится на одну ячейку
  * @property heightMm высота линейки в миллиметрах
  * @property orientation ориентация линейки; при [RulerOrientation.VERTICAL] деления
  *   идут снизу вверх, а [lengthMm] откладывается по вертикали
@@ -19,11 +20,18 @@ data class RulerData(
     val x: Float,
     val y: Float,
     val scalePxPerMm: Float,
-    val lengthMm: Float = DEFAULT_LENGTH_MM,
+    val cellCount: Int = DEFAULT_CELL_COUNT,
+    val scalePerCell: Float = DEFAULT_SCALE_PER_CELL,
     val heightMm: Float = DEFAULT_HEIGHT_MM,
     val orientation: RulerOrientation = RulerOrientation.HORIZONTAL,
     val style: RulerStyle = RulerStyle.BLOCKS
 ) {
+
+    /**
+     * Полная длина линейки в единицах измерения: [cellCount] × [scalePerCell].
+     */
+    val lengthMm: Float
+        get() = cellCount * scalePerCell
 
     /**
      * Ширина габаритного прямоугольника линейки в пикселях изображения.
@@ -51,8 +59,11 @@ data class RulerData(
 
     companion object {
 
-        /** Длина линейки по умолчанию в миллиметрах. */
-        const val DEFAULT_LENGTH_MM = 5f
+        /** Количество ячеек линейки по умолчанию. */
+        const val DEFAULT_CELL_COUNT = 5
+
+        /** Масштаб одной ячейки по умолчанию (единиц измерения на ячейку). */
+        const val DEFAULT_SCALE_PER_CELL = 1f
 
         /** Высота линейки по умолчанию в миллиметрах. */
         const val DEFAULT_HEIGHT_MM = 0.5f
@@ -80,6 +91,9 @@ enum class RulerStyle(val label: String) {
 
     /** Чередующиеся чёрно-белые клетки. */
     BLOCKS("Клетки"),
+
+    /** Чередующиеся чёрно-белые клетки; подписи за линейкой белые. */
+    BLOCKS_WHITE_LABELS("Клетки (белые подписи)"),
 
     /** Полоса снизу с чёрными зарубками. */
     BAR_BLACK("Чёрные зарубки"),
