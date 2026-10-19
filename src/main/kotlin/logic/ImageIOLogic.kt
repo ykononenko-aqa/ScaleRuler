@@ -3,6 +3,7 @@ package com.ykononenko.logic
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import com.ykononenko.model.LengthUnit
+import com.ykononenko.model.NorthArrowData
 import com.ykononenko.model.RulerData
 import org.jetbrains.skia.Image as SkiaImage
 import java.io.File
@@ -40,14 +41,21 @@ fun loadImageFromFile(): ImageBitmap? {
 }
 
 /**
- * Открывает диалог сохранения и записывает изображение вместе с линейкой в PNG.
+ * Открывает диалог сохранения и записывает изображение вместе с линейкой и
+ * указателем на север в PNG.
  *
  * @param image исходное изображение
  * @param ruler линейка для наложения или `null`
+ * @param northArrow указатель на север или `null`
  * @param unit единица измерения для подписей линейки
  * @return `true`, если файл успешно сохранён; иначе `false`
  */
-fun saveImageWithDialog(image: ImageBitmap, ruler: RulerData?, unit: LengthUnit): Boolean {
+fun saveImageWithDialog(
+    image: ImageBitmap,
+    ruler: RulerData?,
+    northArrow: NorthArrowData?,
+    unit: LengthUnit
+): Boolean {
     val chooser = JFileChooser().apply {
         fileFilter = FileNameExtensionFilter("PNG (*.png)", "png")
         selectedFile = File("result.png")
@@ -58,7 +66,7 @@ fun saveImageWithDialog(image: ImageBitmap, ruler: RulerData?, unit: LengthUnit)
     val out = if (file.extension.isBlank()) File("${file.absolutePath}.png") else file
 
     return try {
-        val surface = ImageConverter.bitmapToSurface(image, ruler, unit)
+        val surface = ImageConverter.bitmapToSurface(image, ruler, northArrow, unit)
         ImageConverter.surfaceToFile(surface, out)
         true
     } catch (e: Exception) {

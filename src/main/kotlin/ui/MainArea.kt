@@ -18,26 +18,33 @@ import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.layout.onSizeChanged
+import com.ykononenko.logic.NorthArrowRenderer
 import com.ykononenko.logic.RulerRenderers
 import com.ykononenko.model.AppPoints
 import com.ykononenko.model.LengthUnit
+import com.ykononenko.model.NorthArrowData
 import com.ykononenko.model.RulerData
 import com.ykononenko.state.AppState
 
 /**
- * Центральная область приложения: изображение, расставленные точки и линейка.
+ * Центральная область приложения: изображение, расставленные точки, линейка и
+ * указатель на север.
  *
- * Здесь обрабатываются клики по Canvas (постановка точек) и перетаскивание
- * линейки. Все координаты хранятся в пикселях изображения и конвертируются через
- * [calculateImageLayout] / [canvasToImage] / [imageToCanvas].
+ * Здесь обрабатываются клики по Canvas (постановка точек), перетаскивание
+ * линейки и перемещение/поворот указателя. Все координаты хранятся в пикселях
+ * изображения и конвертируются через [calculateImageLayout] / [canvasToImage] /
+ * [imageToCanvas].
  *
  * @param appState текущее состояние сценария
  * @param image загруженное изображение или `null`
  * @param points расставленные точки
  * @param ruler линейка или `null`
+ * @param northArrow указатель на север или `null`
  * @param unit единица измерения для подписей линейки
  * @param onCanvasClick обработчик клика по Canvas в координатах Canvas
  * @param onRulerDrag обработчик перетаскивания линейки (смещение в координатах Canvas)
+ * @param onNorthMove обработчик перемещения указателя (смещение в пикселях изображения)
+ * @param onNorthRotate обработчик поворота указателя (угол в радианах)
  * @param onCanvasSizeChanged уведомление об изменении размера области Canvas
  * @param modifier модификатор внешней компоновки
  */
@@ -47,9 +54,12 @@ fun MainArea(
     image: ImageBitmap?,
     points: AppPoints,
     ruler: RulerData?,
+    northArrow: NorthArrowData?,
     unit: LengthUnit,
     onCanvasClick: (Offset) -> Unit,
     onRulerDrag: (Offset) -> Unit,
+    onNorthMove: (Offset) -> Unit,
+    onNorthRotate: (Float) -> Unit,
     onCanvasSizeChanged: (Size) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -70,8 +80,14 @@ fun MainArea(
                         .fillMaxSize()
                         .canvasInput(
                             appState = appState,
+                            northArrow = northArrow,
+                            imageWidth = image.width,
+                            imageHeight = image.height,
+                            layout = currentLayout,
                             onClick = { onCanvasClick(it) },
-                            onDrag = { onRulerDrag(it) }
+                            onRulerDrag = { onRulerDrag(it) },
+                            onNorthMove = onNorthMove,
+                            onNorthRotate = onNorthRotate
                         )
                 ) {
                     onCanvasSizeChanged(size)
@@ -83,6 +99,19 @@ fun MainArea(
                         val pos = imageToCanvas(Offset(it.x, it.y), layout)
                         drawIntoCanvas { canvas ->
                             RulerRenderers.of(it.style).draw(canvas.nativeCanvas, it, layout.scale, pos.x, pos.y, unit)
+                        }
+                    }
+                    northArrow?.let {
+                        drawIntoCanvas { canvas ->
+                            NorthArrowRenderer.draw(
+                                canvas = canvas.nativeCanvas,
+                                north = it,
+                                imageWidth = image.width,
+                                imageHeight = image.height,
+                                scale = layout.scale,
+                                offsetX = layout.offsetX,
+                                offsetY = layout.offsetY
+                            )
                         }
                     }
                 }

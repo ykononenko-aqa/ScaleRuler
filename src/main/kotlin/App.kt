@@ -31,25 +31,33 @@ fun App(onExit: () -> Unit = {}) {
     var loadedImage by remember { mutableStateOf<ImageBitmap?>(null) }
     var points by remember { mutableStateOf(AppPoints()) }
     var ruler by remember { mutableStateOf<RulerData?>(null) }
+    var northArrow by remember { mutableStateOf<NorthArrowData?>(null) }
+    var northStyle by remember { mutableStateOf(NorthArrowStyle.BLACK) }
+    var showNorthWarning by remember { mutableStateOf(false) }
     var canvasSize by remember { mutableStateOf(Size.Zero) }
     var selectedUnit by remember { mutableStateOf(LengthUnit.MM) }
     var showBatchDialog by remember { mutableStateOf(false) }
+
+    /** Сбрасывает состояние под новое загруженное фото. */
+    fun resetForNewPhoto(image: ImageBitmap) {
+        loadedImage = image
+        appState = AppState.PHOTO_LOADED
+        mmText = ""
+        cellCountText = "5"
+        scaleText = "1"
+        selectedUnit = LengthUnit.MM
+        points = AppPoints()
+        ruler = null
+        northArrow = null
+        showNorthWarning = false
+    }
 
     MaterialTheme {
         Column(modifier = Modifier.fillMaxSize()) {
 
             TopBar(
                 onLoadPhoto = {
-                    loadImageFromFile()?.let { img ->
-                        loadedImage = img
-                        appState = AppState.PHOTO_LOADED
-                        mmText = ""
-                        cellCountText = "5"
-                        scaleText = "1"
-                        selectedUnit = LengthUnit.MM
-                        points = AppPoints()
-                        ruler = null
-                    }
+                    loadImageFromFile()?.let { resetForNewPhoto(it) }
                 },
                 onExit = onExit
             )
@@ -59,6 +67,7 @@ fun App(onExit: () -> Unit = {}) {
                 image = loadedImage,
                 points = points,
                 ruler = ruler,
+                northArrow = northArrow,
                 unit = selectedUnit,
                 onCanvasClick = { offset ->
                     if (appState == AppState.AWAITING_POINT_1 || appState == AppState.AWAITING_POINT_2) {
@@ -66,6 +75,7 @@ fun App(onExit: () -> Unit = {}) {
                     }
                 },
                 onRulerDrag = { delta ->
+                    if (appState != AppState.RULER_PLACED) return@MainArea
                     val r = ruler ?: return@MainArea
                     val img = loadedImage ?: return@MainArea
                     val layout = calculateImageLayout(img, canvasSize)
@@ -73,6 +83,13 @@ fun App(onExit: () -> Unit = {}) {
                         x = r.x + delta.x / layout.scale,
                         y = r.y + delta.y / layout.scale
                     )
+                },
+                onNorthMove = { delta ->
+                    val arrow = northArrow ?: return@MainArea
+                    northArrow = NorthArrowFactory.move(arrow, delta.x, delta.y)
+                },
+                onNorthRotate = { angle ->
+                    northArrow = northArrow?.copy(angleRad = angle)
                 },
                 onCanvasSizeChanged = { canvasSize = it },
                 modifier = Modifier.weight(1f)
@@ -91,6 +108,7 @@ fun App(onExit: () -> Unit = {}) {
                 onUnitChange = { selectedUnit = it },
                 orientation = ruler?.orientation ?: RulerOrientation.HORIZONTAL,
                 onToggleOrientation = {
+                    if (appState != AppState.RULER_PLACED) return@BottomBar
                     val img = loadedImage ?: return@BottomBar
                     val r = ruler ?: return@BottomBar
                     ruler = RulerFactory.toggleOrientation(r, img, selectedUnit)
@@ -99,25 +117,34 @@ fun App(onExit: () -> Unit = {}) {
                 onStyleChange = { selected ->
                     ruler = ruler?.copy(style = selected)
                 },
+                northArrow = northArrow,
+                northStyle = northStyle,
+                onNorthStyleChange = { selected ->
+                    northStyle = selected
+                    northArrow = northArrow?.copy(style = selected)
+                },
+                onNorthRadiusChange = { fraction ->
+                    northArrow = northArrow?.let {
+                        NorthArrowFactory.setRadiusFraction(it, fraction)
+                    }
+                },
+                onAddNorth = { showNorthWarning = true },
+                showBatch = ruler != null || northArrow != null,
                 onMoveToCorner = { corner ->
                     val img = loadedImage ?: return@BottomBar
-                    val r = ruler ?: return@BottomBar
-                    ruler = RulerFactory.moveToCorner(r, img, corner, selectedUnit)
+                    val arrow = northArrow
+                    if (arrow != null) {
+                        northArrow = NorthArrowFactory.moveToCorner(arrow, img.width, img.height, corner)
+                    } else {
+                        val r = ruler ?: return@BottomBar
+                        ruler = RulerFactory.moveToCorner(r, img, corner, selectedUnit)
+                    }
                 },
                 onBatchClick = { showBatchDialog = true },
                 onButtonClick = {
                     when (appState) {
                         AppState.IDLE -> {
-                            loadImageFromFile()?.let { img ->
-                                loadedImage = img
-                                appState = AppState.PHOTO_LOADED
-                                mmText = ""
-                                cellCountText = "5"
-                                scaleText = "1"
-                                selectedUnit = LengthUnit.MM
-                                points = AppPoints()
-                                ruler = null
-                            }
+                            loadImageFromFile()?.let { resetForNewPhoto(it) }
                         }
                         AppState.AWAITING_POINT_1 -> {
                             val marker = points.tempMarker
@@ -151,13 +178,14 @@ fun App(onExit: () -> Unit = {}) {
                             ) {
                                 val scalePxPerMm = distanceBetween(p1, p2) / mm
                                 ruler = RulerFactory.create(img, scalePxPerMm, cellCount, scalePerCell, selectedUnit)
+                                northArrow = null
                                 points = AppPoints()
                                 appState = AppState.RULER_PLACED
                             }
                         }
-                        AppState.RULER_PLACED -> {
+                        AppState.RULER_PLACED, AppState.NORTH_PLACED -> {
                             val img = loadedImage ?: return@BottomBar
-                            saveImageWithDialog(img, ruler, selectedUnit)
+                            saveImageWithDialog(img, ruler, northArrow, selectedUnit)
                         }
                         else -> appState = nextState(appState)
                     }
@@ -165,9 +193,28 @@ fun App(onExit: () -> Unit = {}) {
             )
         }
 
-        if (showBatchDialog && ruler != null) {
+        if (showNorthWarning) {
+            NorthWarningDialog(
+                rulerPlaced = appState == AppState.RULER_PLACED,
+                onConfirm = {
+                    val img = loadedImage
+                    if (img != null) {
+                        northArrow = NorthArrowFactory.create(img.width, img.height, northStyle)
+                        if (appState == AppState.PHOTO_LOADED) {
+                            ruler = null
+                        }
+                        appState = AppState.NORTH_PLACED
+                    }
+                    showNorthWarning = false
+                },
+                onDismiss = { showNorthWarning = false }
+            )
+        }
+
+        if (showBatchDialog && (ruler != null || northArrow != null)) {
             BatchDialog(
-                ruler = ruler!!,
+                ruler = ruler,
+                northArrow = northArrow,
                 unit = selectedUnit,
                 onDismiss = { showBatchDialog = false }
             )

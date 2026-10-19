@@ -16,6 +16,7 @@ fun nextState(current: AppState): AppState {
         AppState.AWAITING_POINT_2 -> AppState.POINTS_SET
         AppState.POINTS_SET -> AppState.RULER_PLACED
         AppState.RULER_PLACED -> current // остаёмся на месте
+        AppState.NORTH_PLACED -> current // остаёмся на месте
     }
 }
 
@@ -33,5 +34,6 @@ fun buttonText(state: AppState): String {
         AppState.AWAITING_POINT_2 -> "Сохранить вторую точку"
         AppState.POINTS_SET -> "Рассчитать и вывести линейку"
         AppState.RULER_PLACED -> "Сохранить изображение"
+        AppState.NORTH_PLACED -> "Сохранить изображение"
     }
 }

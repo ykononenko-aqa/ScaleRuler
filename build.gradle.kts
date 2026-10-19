@@ -25,7 +25,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Msi, TargetFormat.Dmg, TargetFormat.Deb)
             packageName = "ScaleRuler"
-            packageVersion = "1.0.5"
+            packageVersion = "1.0.6"
 
             windows {
                 iconFile.set(project.file("src/main/resources/icon.ico"))

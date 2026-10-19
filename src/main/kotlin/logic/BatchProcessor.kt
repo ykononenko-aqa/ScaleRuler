@@ -1,6 +1,7 @@
 package com.ykononenko.logic
 
 import com.ykononenko.model.LengthUnit
+import com.ykononenko.model.NorthArrowData
 import com.ykononenko.model.RulerData
 import org.jetbrains.skia.Image as SkiaImage
 import java.io.File
@@ -22,7 +23,9 @@ object BatchProcessor {
      *
      * @param sourceDir папка с исходными изображениями (JPG/JPEG/PNG/BMP)
      * @param targetDir папка для сохранения результатов
-     * @param ruler линейка, задающая масштаб (для всех фото одинаковый)
+     * @param ruler линейка, задающая масштаб (для всех фото одинаковый), или
+     *   `null`, если наносится только указатель на север
+     * @param northArrow указатель на север или `null`
      * @param unit единица измерения для подписей линейки
      * @param onProgress обратный вызов прогресса: номер текущего файла, всего
      *   файлов и имя обрабатываемого файла
@@ -31,7 +34,8 @@ object BatchProcessor {
     fun process(
         sourceDir: File,
         targetDir: File,
-        ruler: RulerData,
+        ruler: RulerData?,
+        northArrow: NorthArrowData?,
         unit: LengthUnit,
         onProgress: (current: Int, total: Int, fileName: String) -> Unit
     ): Int {
@@ -48,10 +52,15 @@ object BatchProcessor {
                 // Загружаем, чтобы узнать размер
                 val bytes = file.readBytes()
                 val skiaImage = SkiaImage.makeFromEncoded(bytes)
-                val adjustedRuler = RulerFactory.fitToImage(ruler, skiaImage.width, skiaImage.height, unit)
+                val adjustedRuler = ruler?.let {
+                    RulerFactory.fitToImage(it, skiaImage.width, skiaImage.height, unit)
+                }
+                val adjustedNorth = northArrow?.let {
+                    NorthArrowFactory.fitToImage(it, skiaImage.width, skiaImage.height)
+                }
 
                 // Отрисовываем с скорректированной линейкой
-                val surface = ImageConverter.fileToSurface(file, adjustedRuler, unit)
+                val surface = ImageConverter.fileToSurface(file, adjustedRuler, adjustedNorth, unit)
                 if (surface != null) {
                     val targetFile = File(targetDir, file.nameWithoutExtension + ".png")
                     ImageConverter.surfaceToFile(surface, targetFile)
