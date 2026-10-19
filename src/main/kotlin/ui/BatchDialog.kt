@@ -10,6 +10,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.ykononenko.logic.BatchProcessor
 import com.ykononenko.model.LengthUnit
+import com.ykononenko.model.NorthArrowData
 import com.ykononenko.model.RulerData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -23,13 +24,16 @@ import javax.swing.JFileChooser
  * Обработка выполняется в фоновом потоке ([Dispatchers.IO]), прогресс
  * отображается по ходу выполнения.
  *
- * @param ruler линейка, задающая масштаб для всех изображений
+ * @param ruler линейка, задающая масштаб для всех изображений, или `null`, если
+ *   наносится только указатель на север
+ * @param northArrow указатель на север или `null`
  * @param unit единица измерения для подписей линейки
  * @param onDismiss закрытие диалога
  */
 @Composable
 fun BatchDialog(
-    ruler: RulerData,
+    ruler: RulerData?,
+    northArrow: NorthArrowData?,
     unit: LengthUnit,
     onDismiss: () -> Unit
 ) {
@@ -85,7 +89,7 @@ fun BatchDialog(
 
                 // Прогресс
                 if (isProcessing) {
-                    Text("$currentFile", fontSize = 12.sp)
+                    Text(currentFile, fontSize = 12.sp)
                     LinearProgressIndicator(
                         progress = if (total > 0) progress.toFloat() / total else 0f,
                         modifier = Modifier.fillMaxWidth()
@@ -130,6 +134,7 @@ fun BatchDialog(
                                                     sourceDir = src,
                                                     targetDir = tgt,
                                                     ruler = ruler,
+                                                    northArrow = northArrow,
                                                     unit = unit,
                                                     onProgress = { cur, tot, file ->
                                                         progress = cur

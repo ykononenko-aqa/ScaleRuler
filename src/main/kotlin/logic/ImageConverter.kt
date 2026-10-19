@@ -3,6 +3,7 @@ package com.ykononenko.logic
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import com.ykononenko.model.LengthUnit
+import com.ykononenko.model.NorthArrowData
 import com.ykononenko.model.RulerData
 import org.jetbrains.skia.Image as SkiaImage
 import org.jetbrains.skia.Surface
@@ -21,16 +22,22 @@ object ImageConverter {
      * Читает файл изображения и возвращает поверхность с уже нанесённой линейкой.
      *
      * @param file файл изображения (JPG/PNG/BMP)
-     * @param ruler линейка, положение которой задано в пикселях этого изображения
+     * @param ruler линейка или `null`, если наносится только указатель на север
+     * @param northArrow указатель на север или `null`
      * @param unit единица измерения для подписей линейки
      * @return готовая к сохранению [Surface] или `null` при ошибке чтения
      */
-    fun fileToSurface(file: File, ruler: RulerData, unit: LengthUnit): Surface? {
+    fun fileToSurface(
+        file: File,
+        ruler: RulerData?,
+        northArrow: NorthArrowData?,
+        unit: LengthUnit
+    ): Surface? {
         return try {
             val bytes = file.readBytes()
             val skiaImage = SkiaImage.makeFromEncoded(bytes)
             val image = skiaImage.toComposeImageBitmap()
-            imageToSurface(image, ruler, unit)
+            imageToSurface(image, ruler, northArrow, unit)
         } catch (e: Exception) {
             e.printStackTrace()
             null
@@ -38,15 +45,22 @@ object ImageConverter {
     }
 
     /**
-     * Создаёт поверхность с изображением и, при наличии, нанесённой линейкой.
+     * Создаёт поверхность с изображением и, при наличии, нанесённой линейкой и
+     * указателем на север.
      *
      * @param image исходное изображение
      * @param ruler линейка для наложения или `null`, чтобы вернуть только изображение
+     * @param northArrow указатель на север или `null`
      * @param unit единица измерения для подписей линейки
      * @return поверхность в разрешении исходного изображения
      */
-    fun bitmapToSurface(image: ImageBitmap, ruler: RulerData?, unit: LengthUnit): Surface {
-        return imageToSurface(image, ruler, unit)
+    fun bitmapToSurface(
+        image: ImageBitmap,
+        ruler: RulerData?,
+        northArrow: NorthArrowData?,
+        unit: LengthUnit
+    ): Surface {
+        return imageToSurface(image, ruler, northArrow, unit)
     }
 
     /**
@@ -55,10 +69,16 @@ object ImageConverter {
      *
      * @param image исходное изображение
      * @param ruler линейка для наложения или `null`
+     * @param northArrow указатель на север или `null`
      * @param unit единица измерения для подписей линейки
      * @return растровая поверхность размером с изображение
      */
-    private fun imageToSurface(image: ImageBitmap, ruler: RulerData?, unit: LengthUnit): Surface {
+    private fun imageToSurface(
+        image: ImageBitmap,
+        ruler: RulerData?,
+        northArrow: NorthArrowData?,
+        unit: LengthUnit
+    ): Surface {
         val w = image.width
         val h = image.height
         val surface = Surface.makeRasterN32Premul(w, h)
@@ -81,6 +101,10 @@ object ImageConverter {
 
         if (ruler != null) {
             RulerRenderers.of(ruler.style).draw(canvas, ruler, 1f, ruler.x, ruler.y, unit)
+        }
+
+        if (northArrow != null) {
+            NorthArrowRenderer.draw(canvas, northArrow, w, h, 1f, 0f, 0f)
         }
 
         return surface
