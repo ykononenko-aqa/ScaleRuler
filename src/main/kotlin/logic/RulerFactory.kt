@@ -5,14 +5,12 @@ import com.ykononenko.model.Corner
 import com.ykononenko.model.LengthUnit
 import com.ykononenko.model.RulerData
 import com.ykononenko.model.RulerOrientation
+import com.ykononenko.utils.IMAGE_MARGIN_PX
 
 /**
  * Фабрика линейки: создание и позиционирование [RulerData] относительно изображения.
  */
 object RulerFactory {
-
-    /** Отступ линейки от края изображения в пикселях. */
-    private const val MARGIN = 10f
 
     /**
      * Создаёт линейку у правого нижнего края изображения по заданному масштабу.
@@ -62,7 +60,7 @@ object RulerFactory {
     }
 
     /**
-     * Перемещает линейку в заданный угол изображения с отступом [MARGIN].
+     * Перемещает линейку в заданный угол изображения с отступом [IMAGE_MARGIN_PX].
      *
      * Учитывает выступ подписей за габарит линейки, чтобы вынесенная подпись не
      * обрезалась краем изображения.
@@ -82,14 +80,14 @@ object RulerFactory {
         val insets = calculateLabelInsets(ruler, unit)
 
         val x = when (corner) {
-            Corner.TOP_LEFT, Corner.BOTTOM_LEFT -> MARGIN + insets.left
+            Corner.TOP_LEFT, Corner.BOTTOM_LEFT -> IMAGE_MARGIN_PX + insets.left
             Corner.TOP_RIGHT, Corner.BOTTOM_RIGHT ->
-                image.width - ruler.boxWidthPx - insets.right - MARGIN
+                image.width - ruler.boxWidthPx - insets.right - IMAGE_MARGIN_PX
         }
         val y = when (corner) {
-            Corner.TOP_LEFT, Corner.TOP_RIGHT -> MARGIN + insets.top
+            Corner.TOP_LEFT, Corner.TOP_RIGHT -> IMAGE_MARGIN_PX + insets.top
             Corner.BOTTOM_LEFT, Corner.BOTTOM_RIGHT ->
-                image.height - ruler.boxHeightPx - insets.bottom - MARGIN
+                image.height - ruler.boxHeightPx - insets.bottom - IMAGE_MARGIN_PX
         }
 
         return ruler.copy(x = x, y = y)
@@ -115,13 +113,13 @@ object RulerFactory {
     ): RulerData {
         val insets = calculateLabelInsets(ruler, unit)
 
-        val minX = MARGIN + insets.left
-        val maxX = (imageWidth - ruler.boxWidthPx - insets.right - MARGIN)
+        val minX = IMAGE_MARGIN_PX + insets.left
+        val maxX = (imageWidth - ruler.boxWidthPx - insets.right - IMAGE_MARGIN_PX)
             .coerceAtLeast(minX)
         val x = ruler.x.coerceIn(minX, maxX)
 
-        val minY = MARGIN + insets.top
-        val maxY = (imageHeight - ruler.boxHeightPx - insets.bottom - MARGIN)
+        val minY = IMAGE_MARGIN_PX + insets.top
+        val maxY = (imageHeight - ruler.boxHeightPx - insets.bottom - IMAGE_MARGIN_PX)
             .coerceAtLeast(minY)
         val y = ruler.y.coerceIn(minY, maxY)
 

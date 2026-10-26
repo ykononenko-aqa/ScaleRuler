@@ -7,13 +7,14 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
+import com.ykononenko.controls.EditorSession
 import com.ykononenko.model.NorthArrowData
 import com.ykononenko.state.AppState
 import kotlin.math.PI
 import kotlin.math.atan2
 
 /**
- * Режим обработки жеста в состоянии [AppState.RULER_PLACED].
+ * Режим обработки жеста в состояниях редактирования.
  */
 private enum class DragMode {
 
@@ -34,48 +35,29 @@ private enum class DragMode {
  * Подключает обработку ввода к Canvas в зависимости от текущего состояния.
  *
  * В состояниях [AppState.AWAITING_POINT_1] и [AppState.AWAITING_POINT_2]
- * обрабатываются одиночные тапы (постановка точек). В состоянии
- * [AppState.RULER_PLACED] без указателя на север перетаскивание перемещает
- * линейку. В состоянии [AppState.NORTH_PLACED] (а также в [AppState.RULER_PLACED]
- * при наличии указателя) перетаскивание перемещает или поворачивает указатель:
- * нажатие внутри центрального круга перемещает, внутри внешней невидимой
- * окружности — поворачивает.
+ * обрабатываются одиночные тапы. Клик сразу переводится в координаты
+ * изображения и сохраняется как временная точка.
  *
- * @param appState текущее состояние сценария
- * @param northArrow указатель на север или `null`
- * @param imageWidth ширина изображения в пикселях
- * @param imageHeight высота изображения в пикселях
- * @param layout текущая геометрия отображения или `null`
- * @param onClick обработчик тапа в координатах Canvas
- * @param onRulerDrag обработчик перетаскивания линейки; смещение в координатах Canvas
- * @param onNorthMove обработчик перемещения указателя; смещение в пикселях изображения
- * @param onNorthRotate обработчик поворота указателя; угол в радианах, `0` — вверх
- * @return модификатор с подключённым вводом
+ * В состоянии [AppState.RULER_PLACED] без указателя перетаскивание перемещает
+ * линейку. При наличии указателя, а также в [AppState.NORTH_PLACED],
+ * перетаскивание перемещает или поворачивает указатель.
  */
 @Composable
 fun Modifier.canvasInput(
-    appState: AppState,
-    northArrow: NorthArrowData?,
-    imageWidth: Int,
-    imageHeight: Int,
-    layout: ImageLayout?,
-    onClick: (Offset) -> Unit,
-    onRulerDrag: (Offset) -> Unit,
-    onNorthMove: (Offset) -> Unit,
-    onNorthRotate: (Float) -> Unit
+    session: EditorSession,
+    layout: ImageLayout?
 ): Modifier {
-    val currentNorth by rememberUpdatedState(northArrow)
     val currentLayout by rememberUpdatedState(layout)
-    val currentImageWidth by rememberUpdatedState(imageWidth)
-    val currentImageHeight by rememberUpdatedState(imageHeight)
 
-    return this.pointerInput(appState, northArrow != null) {
-        when (appState) {
+    return this.pointerInput(session.appState, session.northArrow != null) {
+        when (session.appState) {
             AppState.AWAITING_POINT_1, AppState.AWAITING_POINT_2 -> {
                 detectTapGestures { tapOffset ->
-                    onClick(tapOffset)
+                    val current = currentLayout ?: return@detectTapGestures
+                    session.setPendingPoint(canvasToImage(tapOffset, current))
                 }
             }
+
             AppState.RULER_PLACED, AppState.NORTH_PLACED -> {
                 awaitPointerEventScope {
                     while (true) {
@@ -84,48 +66,70 @@ fun Modifier.canvasInput(
                         if (!dc.pressed) continue
                         dc.consume()
 
-                        val currentLayoutValue = currentLayout
-                        val arrow = currentNorth
+                        val current = currentLayout
+                        val arrow = session.northArrow
+                        val image = session.image
                         val mode = resolveMode(
                             arrow = arrow,
-                            layout = currentLayoutValue,
+                            layout = current,
                             canvasPosition = dc.position,
-                            imageWidth = currentImageWidth,
-                            imageHeight = currentImageHeight
+                            imageWidth = image?.width ?: 0,
+                            imageHeight = image?.height ?: 0
                         )
-                        if (mode == DragMode.NORTH_ROTATE && arrow != null && currentLayoutValue != null) {
-                            onNorthRotate(angleTo(arrow, canvasToImage(dc.position, currentLayoutValue)))
+                        if (mode == DragMode.NORTH_ROTATE && arrow != null && current != null) {
+                            session.rotateNorth(
+                                angleTo(arrow, canvasToImage(dc.position, current))
+                            )
                         }
 
                         var prev = dc.position
                         do {
                             val ev = awaitPointerEvent()
                             val ch = ev.changes.firstOrNull() ?: break
-                            val d = Offset(ch.position.x - prev.x, ch.position.y - prev.y)
+                            val deltaCanvas = Offset(ch.position.x - prev.x, ch.position.y - prev.y)
                             prev = ch.position
                             ch.consume()
 
+                            val current = currentLayout
                             when (mode) {
-                                DragMode.RULER -> onRulerDrag(d)
+                                DragMode.RULER -> {
+                                    if (current != null && current.scale > 0f) {
+                                        session.moveRulerBy(
+                                            Offset(
+                                                deltaCanvas.x / current.scale,
+                                                deltaCanvas.y / current.scale
+                                            )
+                                        )
+                                    }
+                                }
+
                                 DragMode.NORTH_MOVE -> {
-                                    val l = currentLayout
-                                    if (l != null) {
-                                        onNorthMove(Offset(d.x / l.scale, d.y / l.scale))
+                                    if (current != null && current.scale > 0f) {
+                                        session.moveNorthBy(
+                                            Offset(
+                                                deltaCanvas.x / current.scale,
+                                                deltaCanvas.y / current.scale
+                                            )
+                                        )
                                     }
                                 }
+
                                 DragMode.NORTH_ROTATE -> {
-                                    val l = currentLayout
-                                    val a = currentNorth
-                                    if (l != null && a != null) {
-                                        onNorthRotate(angleTo(a, canvasToImage(ch.position, l)))
+                                    val a = session.northArrow
+                                    if (current != null && a != null) {
+                                        session.rotateNorth(
+                                            angleTo(a, canvasToImage(ch.position, current))
+                                        )
                                     }
                                 }
+
                                 DragMode.NONE -> {}
                             }
                         } while (ch.pressed)
                     }
                 }
             }
+
             else -> {}
         }
     }
@@ -165,10 +169,6 @@ private fun resolveMode(
 
 /**
  * Вычисляет угол указателя на точку: `0` — вверх (север), по часовой стрелке.
- *
- * @param arrow указатель, задающий центр
- * @param imagePosition точка в координатах изображения
- * @return угол в радианах в диапазоне `[0, 2π)`
  */
 private fun angleTo(arrow: NorthArrowData, imagePosition: Offset): Float {
     val dx = imagePosition.x - arrow.centerX
