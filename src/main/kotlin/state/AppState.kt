@@ -3,8 +3,8 @@ package com.ykononenko.state
 /**
  * Состояния экранного сценария работы приложения.
  *
- * Переходы между состояниями задаются в [com.ykononenko.logic.nextState],
- * а текст основной кнопки — в [com.ykononenko.logic.buttonText].
+ * Переходы выполняются кнопками из пакета [com.ykononenko.controls]: каждая
+ * кнопка хранит допустимые состояния и целевое состояние.
  */
 enum class AppState {
 

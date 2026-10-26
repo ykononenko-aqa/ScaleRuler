@@ -3,6 +3,7 @@ package com.ykononenko.logic
 import com.ykononenko.model.Corner
 import com.ykononenko.model.NorthArrowData
 import com.ykononenko.model.NorthArrowStyle
+import com.ykononenko.utils.IMAGE_MARGIN_PX
 
 /**
  * Фабрика указателя на север: создание, позиционирование и изменение размера
@@ -12,9 +13,6 @@ import com.ykononenko.model.NorthArrowStyle
  * целиком оставалась в пределах изображения.
  */
 object NorthArrowFactory {
-
-    /** Отступ указателя от края изображения в пикселях. */
-    private const val MARGIN = 10f
 
     /**
      * Создаёт указатель в правом верхнем углу изображения.
@@ -34,7 +32,7 @@ object NorthArrowFactory {
     }
 
     /**
-     * Перемещает указатель в заданный угол изображения с отступом [MARGIN].
+     * Перемещает указатель в заданный угол изображения с отступом [IMAGE_MARGIN_PX].
      *
      * @param north текущий указатель (сохраняет размер и угол)
      * @param imageWidth ширина изображения в пикселях
@@ -51,12 +49,12 @@ object NorthArrowFactory {
         val radius = north.radiusPx(imageWidth, imageHeight)
 
         val x = when (corner) {
-            Corner.TOP_LEFT, Corner.BOTTOM_LEFT -> radius + MARGIN
-            Corner.TOP_RIGHT, Corner.BOTTOM_RIGHT -> imageWidth - radius - MARGIN
+            Corner.TOP_LEFT, Corner.BOTTOM_LEFT -> radius + IMAGE_MARGIN_PX
+            Corner.TOP_RIGHT, Corner.BOTTOM_RIGHT -> imageWidth - radius - IMAGE_MARGIN_PX
         }
         val y = when (corner) {
-            Corner.TOP_LEFT, Corner.TOP_RIGHT -> radius + MARGIN
-            Corner.BOTTOM_LEFT, Corner.BOTTOM_RIGHT -> imageHeight - radius - MARGIN
+            Corner.TOP_LEFT, Corner.TOP_RIGHT -> radius + IMAGE_MARGIN_PX
+            Corner.BOTTOM_LEFT, Corner.BOTTOM_RIGHT -> imageHeight - radius - IMAGE_MARGIN_PX
         }
 
         return north.copy(centerX = x, centerY = y)
@@ -117,10 +115,10 @@ object NorthArrowFactory {
     ): NorthArrowData {
         val radius = north.radiusPx(imageWidth, imageHeight)
 
-        val minX = radius + MARGIN
-        val maxX = (imageWidth - radius - MARGIN).coerceAtLeast(minX)
-        val minY = radius + MARGIN
-        val maxY = (imageHeight - radius - MARGIN).coerceAtLeast(minY)
+        val minX = radius + IMAGE_MARGIN_PX
+        val maxX = (imageWidth - radius - IMAGE_MARGIN_PX).coerceAtLeast(minX)
+        val minY = radius + IMAGE_MARGIN_PX
+        val maxY = (imageHeight - radius - IMAGE_MARGIN_PX).coerceAtLeast(minY)
 
         return north.copy(
             centerX = north.centerX.coerceIn(minX, maxX),

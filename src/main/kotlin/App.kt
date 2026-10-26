@@ -3,220 +3,63 @@ package com.ykononenko
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.MaterialTheme
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.ImageBitmap
-import com.ykononenko.logic.*
-import com.ykononenko.model.*
+import com.ykononenko.controls.EditorSession
+import com.ykononenko.controls.buttons.ConfirmAddNorthButton
+import com.ykononenko.controls.buttons.LoadPhotoButton
 import com.ykononenko.state.AppState
-import com.ykononenko.ui.*
+import com.ykononenko.ui.BatchDialog
+import com.ykononenko.ui.BottomBar
+import com.ykononenko.ui.MainArea
+import com.ykononenko.ui.NorthWarningDialog
+import com.ykononenko.ui.SwingImageFileService
+import com.ykononenko.ui.TopBar
 
 /**
  * Корневой composable приложения.
  *
- * Единая точка сборки: всё изменяемое состояние хранится здесь через
- * `remember { mutableStateOf(...) }` и передаётся вниз в панели и область Canvas.
- * Здесь же обрабатываются действия пользователя и переходы между состояниями
- * [AppState].
+ * Создаёт [EditorSession] и передаёт его панелям и области Canvas. Вся
+ * бизнес-логика находится в действиях кнопок и методах сессии.
  *
  * @param onExit обработчик выхода из приложения
  */
 @Composable
 fun App(onExit: () -> Unit = {}) {
-    var appState by remember { mutableStateOf(AppState.IDLE) }
-    var mmText by remember { mutableStateOf("") }
-    var cellCountText by remember { mutableStateOf("5") }
-    var scaleText by remember { mutableStateOf("1") }
-    var loadedImage by remember { mutableStateOf<ImageBitmap?>(null) }
-    var points by remember { mutableStateOf(AppPoints()) }
-    var ruler by remember { mutableStateOf<RulerData?>(null) }
-    var northArrow by remember { mutableStateOf<NorthArrowData?>(null) }
-    var northStyle by remember { mutableStateOf(NorthArrowStyle.BLACK) }
-    var showNorthWarning by remember { mutableStateOf(false) }
-    var canvasSize by remember { mutableStateOf(Size.Zero) }
-    var selectedUnit by remember { mutableStateOf(LengthUnit.MM) }
-    var showBatchDialog by remember { mutableStateOf(false) }
-
-    /** Сбрасывает состояние под новое загруженное фото. */
-    fun resetForNewPhoto(image: ImageBitmap) {
-        loadedImage = image
-        appState = AppState.PHOTO_LOADED
-        mmText = ""
-        cellCountText = "5"
-        scaleText = "1"
-        selectedUnit = LengthUnit.MM
-        points = AppPoints()
-        ruler = null
-        northArrow = null
-        showNorthWarning = false
-    }
+    val session = remember { EditorSession(SwingImageFileService()) }
+    val loadPhotoButton = remember { LoadPhotoButton() }
+    val confirmAddNorthButton = remember { ConfirmAddNorthButton() }
 
     MaterialTheme {
         Column(modifier = Modifier.fillMaxSize()) {
-
             TopBar(
-                onLoadPhoto = {
-                    loadImageFromFile()?.let { resetForNewPhoto(it) }
-                },
+                onLoadPhoto = { loadPhotoButton.action(session) },
                 onExit = onExit
             )
 
             MainArea(
-                appState = appState,
-                image = loadedImage,
-                points = points,
-                ruler = ruler,
-                northArrow = northArrow,
-                unit = selectedUnit,
-                onCanvasClick = { offset ->
-                    if (appState == AppState.AWAITING_POINT_1 || appState == AppState.AWAITING_POINT_2) {
-                        points = points.copy(tempMarker = offset)
-                    }
-                },
-                onRulerDrag = { delta ->
-                    if (appState != AppState.RULER_PLACED) return@MainArea
-                    val r = ruler ?: return@MainArea
-                    val img = loadedImage ?: return@MainArea
-                    val layout = calculateImageLayout(img, canvasSize)
-                    ruler = r.copy(
-                        x = r.x + delta.x / layout.scale,
-                        y = r.y + delta.y / layout.scale
-                    )
-                },
-                onNorthMove = { delta ->
-                    val arrow = northArrow ?: return@MainArea
-                    northArrow = NorthArrowFactory.move(arrow, delta.x, delta.y)
-                },
-                onNorthRotate = { angle ->
-                    northArrow = northArrow?.copy(angleRad = angle)
-                },
-                onCanvasSizeChanged = { canvasSize = it },
+                session = session,
                 modifier = Modifier.weight(1f)
             )
 
-            BottomBar(
-                appState = appState,
-                mmText = mmText,
-                onMmTextChange = { mmText = it },
-                cellCountText = cellCountText,
-                onCellCountTextChange = { cellCountText = it },
-                scaleText = scaleText,
-                onScaleTextChange = { scaleText = it },
-                buttonText = buttonText(appState),
-                selectedUnit = selectedUnit,
-                onUnitChange = { selectedUnit = it },
-                orientation = ruler?.orientation ?: RulerOrientation.HORIZONTAL,
-                onToggleOrientation = {
-                    if (appState != AppState.RULER_PLACED) return@BottomBar
-                    val img = loadedImage ?: return@BottomBar
-                    val r = ruler ?: return@BottomBar
-                    ruler = RulerFactory.toggleOrientation(r, img, selectedUnit)
-                },
-                style = ruler?.style ?: RulerStyle.BLOCKS,
-                onStyleChange = { selected ->
-                    ruler = ruler?.copy(style = selected)
-                },
-                northArrow = northArrow,
-                northStyle = northStyle,
-                onNorthStyleChange = { selected ->
-                    northStyle = selected
-                    northArrow = northArrow?.copy(style = selected)
-                },
-                onNorthRadiusChange = { fraction ->
-                    northArrow = northArrow?.let {
-                        NorthArrowFactory.setRadiusFraction(it, fraction)
-                    }
-                },
-                onAddNorth = { showNorthWarning = true },
-                showBatch = ruler != null || northArrow != null,
-                onMoveToCorner = { corner ->
-                    val img = loadedImage ?: return@BottomBar
-                    val arrow = northArrow
-                    if (arrow != null) {
-                        northArrow = NorthArrowFactory.moveToCorner(arrow, img.width, img.height, corner)
-                    } else {
-                        val r = ruler ?: return@BottomBar
-                        ruler = RulerFactory.moveToCorner(r, img, corner, selectedUnit)
-                    }
-                },
-                onBatchClick = { showBatchDialog = true },
-                onButtonClick = {
-                    when (appState) {
-                        AppState.IDLE -> {
-                            loadImageFromFile()?.let { resetForNewPhoto(it) }
-                        }
-                        AppState.AWAITING_POINT_1 -> {
-                            val marker = points.tempMarker
-                            val img = loadedImage
-                            if (marker != null && img != null) {
-                                val layout = calculateImageLayout(img, canvasSize)
-                                points = points.copy(point1 = canvasToImage(marker, layout), tempMarker = null)
-                                appState = AppState.AWAITING_POINT_2
-                            }
-                        }
-                        AppState.AWAITING_POINT_2 -> {
-                            val marker = points.tempMarker
-                            val img = loadedImage
-                            if (marker != null && img != null) {
-                                val layout = calculateImageLayout(img, canvasSize)
-                                points = points.copy(point2 = canvasToImage(marker, layout), tempMarker = null)
-                                appState = AppState.POINTS_SET
-                            }
-                        }
-                        AppState.POINTS_SET -> {
-                            val mm = mmText.toFloatOrNull()
-                            val cellCount = cellCountText.toIntOrNull()
-                            val scalePerCell = scaleText.toFloatOrNull()
-                            val p1 = points.point1
-                            val p2 = points.point2
-                            val img = loadedImage
-                            if (mm != null && mm > 0 &&
-                                cellCount != null && cellCount >= 1 &&
-                                scalePerCell != null && scalePerCell > 0 &&
-                                p1 != null && p2 != null && img != null
-                            ) {
-                                val scalePxPerMm = distanceBetween(p1, p2) / mm
-                                ruler = RulerFactory.create(img, scalePxPerMm, cellCount, scalePerCell, selectedUnit)
-                                northArrow = null
-                                points = AppPoints()
-                                appState = AppState.RULER_PLACED
-                            }
-                        }
-                        AppState.RULER_PLACED, AppState.NORTH_PLACED -> {
-                            val img = loadedImage ?: return@BottomBar
-                            saveImageWithDialog(img, ruler, northArrow, selectedUnit)
-                        }
-                        else -> appState = nextState(appState)
-                    }
-                }
-            )
+            BottomBar(session = session)
         }
 
-        if (showNorthWarning) {
+        if (session.showNorthWarning) {
             NorthWarningDialog(
-                rulerPlaced = appState == AppState.RULER_PLACED,
-                onConfirm = {
-                    val img = loadedImage
-                    if (img != null) {
-                        northArrow = NorthArrowFactory.create(img.width, img.height, northStyle)
-                        if (appState == AppState.PHOTO_LOADED) {
-                            ruler = null
-                        }
-                        appState = AppState.NORTH_PLACED
-                    }
-                    showNorthWarning = false
-                },
-                onDismiss = { showNorthWarning = false }
+                rulerPlaced = session.appState == AppState.RULER_PLACED,
+                onConfirm = { confirmAddNorthButton.action(session) },
+                onDismiss = { session.dismissNorthWarning() }
             )
         }
 
-        if (showBatchDialog && (ruler != null || northArrow != null)) {
+        if (session.showBatchDialog && (session.ruler != null || session.northArrow != null)) {
             BatchDialog(
-                ruler = ruler,
-                northArrow = northArrow,
-                unit = selectedUnit,
-                onDismiss = { showBatchDialog = false }
+                ruler = session.ruler,
+                northArrow = session.northArrow,
+                unit = session.unit,
+                onDismiss = { session.dismissBatch() }
             )
         }
     }
