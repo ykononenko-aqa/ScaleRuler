@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.layout.onSizeChanged
 import com.ykononenko.controls.EditorSession
+import com.ykononenko.logic.MeasurementRenderer
 import com.ykononenko.logic.NorthArrowRenderer
 import com.ykononenko.logic.RulerRenderers
 import com.ykononenko.model.AppPoints
@@ -61,16 +62,50 @@ fun MainArea(
             ) {
                 drawImageScaled(image, layout)
                 drawPoints(session.points, layout)
-                session.ruler?.let {
-                    val pos = imageToCanvas(Offset(it.x, it.y), layout)
+                session.ruler?.let { ruler ->
+                    val pos = imageToCanvas(Offset(ruler.x, ruler.y), layout)
                     drawIntoCanvas { canvas ->
-                        RulerRenderers.of(it.style).draw(
+                        RulerRenderers.of(ruler.style).draw(
                             canvas.nativeCanvas,
-                            it,
+                            ruler,
                             layout.scale,
                             pos.x,
                             pos.y,
                             session.unit
+                        )
+                        MeasurementRenderer.draw(
+                            canvas = canvas.nativeCanvas,
+                            measurements = session.measurements.items,
+                            ruler = ruler,
+                            unit = session.unit,
+                            fontSizePx = session.measurementFontSize,
+                            scale = layout.scale,
+                            offsetX = layout.offsetX,
+                            offsetY = layout.offsetY
+                        )
+                    }
+                }
+                session.measurements.point1?.let { first ->
+                    drawIntoCanvas { canvas ->
+                        MeasurementRenderer.drawPending(
+                            canvas = canvas.nativeCanvas,
+                            point = first,
+                            color = session.measurementColor,
+                            scale = layout.scale,
+                            offsetX = layout.offsetX,
+                            offsetY = layout.offsetY
+                        )
+                    }
+                }
+                session.measurements.pendingPoint?.let { pending ->
+                    drawIntoCanvas { canvas ->
+                        MeasurementRenderer.drawPending(
+                            canvas = canvas.nativeCanvas,
+                            point = pending,
+                            color = session.measurementColor,
+                            scale = layout.scale,
+                            offsetX = layout.offsetX,
+                            offsetY = layout.offsetY
                         )
                     }
                 }
@@ -114,9 +149,9 @@ private fun DrawScope.drawImageScaled(
  * Рисует маркеры расставленных точек.
  */
 private fun DrawScope.drawPoints(points: AppPoints, layout: ImageLayout) {
-    points.point1?.let { drawMarker(imageToCanvas(it, layout)) }
-    points.point2?.let { drawMarker(imageToCanvas(it, layout)) }
-    points.pendingPoint?.let { drawMarker(imageToCanvas(it, layout)) }
+    points.point1?.let { drawMarker(imageToCanvas(it.toOffset(), layout)) }
+    points.point2?.let { drawMarker(imageToCanvas(it.toOffset(), layout)) }
+    points.pendingPoint?.let { drawMarker(imageToCanvas(it.toOffset(), layout)) }
 }
 
 /**

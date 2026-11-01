@@ -14,7 +14,7 @@ class ConfirmAddNorthButton(
     order: Int = 0
 ) : StateButton(
     title = "Добавить",
-    from = setOf(AppState.PHOTO_LOADED, AppState.RULER_PLACED),
+    from = setOf(AppState.PHOTO_LOADED, AppState.RULER_PLACED, AppState.MEASURING),
     to = AppState.NORTH_PLACED,
     size = size,
     row = row,

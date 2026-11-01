@@ -14,7 +14,7 @@ class BatchButton(
     order: Int = 40
 ) : StateButton(
     title = "Пакетная обработка",
-    from = setOf(AppState.RULER_PLACED, AppState.NORTH_PLACED),
+    from = setOf(AppState.RULER_PLACED, AppState.NORTH_PLACED, AppState.MEASURING),
     size = size,
     row = row,
     order = order

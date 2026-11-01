@@ -1,6 +1,15 @@
 package com.ykononenko.model
 
-import androidx.compose.ui.geometry.Offset
+/**
+ * Точка в координатах исходного изображения.
+ *
+ * @property x координата X в пикселях изображения
+ * @property y координата Y в пикселях изображения
+ */
+data class Point(
+    val x: Float,
+    val y: Float
+)
 
 /**
  * Набор точек, расставляемых пользователем для калибровки масштаба.
@@ -11,7 +20,7 @@ import androidx.compose.ui.geometry.Offset
  * @property point2 вторая точка в координатах исходного изображения
  */
 data class AppPoints(
-    val pendingPoint: Offset? = null,
-    val point1: Offset? = null,
-    val point2: Offset? = null
+    val pendingPoint: Point? = null,
+    val point1: Point? = null,
+    val point2: Point? = null
 )

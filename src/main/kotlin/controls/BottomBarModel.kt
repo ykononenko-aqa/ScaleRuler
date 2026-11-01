@@ -5,10 +5,13 @@ import androidx.compose.ui.unit.dp
 import com.ykononenko.controls.buttons.AddNorthButton
 import com.ykononenko.controls.buttons.BatchButton
 import com.ykononenko.controls.buttons.BuildRulerButton
+import com.ykononenko.controls.buttons.DeleteMeasurementButton
 import com.ykononenko.controls.buttons.LoadPhotoButton
 import com.ykononenko.controls.buttons.MoveToCornerButton
 import com.ykononenko.controls.buttons.SaveImageButton
+import com.ykononenko.controls.buttons.SaveMeasurementPointButton
 import com.ykononenko.controls.buttons.SavePointButton
+import com.ykononenko.controls.buttons.StartMeasurementButton
 import com.ykononenko.controls.buttons.StartPointPlacementButton
 import com.ykononenko.controls.buttons.ToggleOrientationButton
 import com.ykononenko.controls.fields.SelectControl
@@ -16,6 +19,8 @@ import com.ykononenko.controls.fields.SliderControl
 import com.ykononenko.controls.fields.TextFieldControl
 import com.ykononenko.model.Corner
 import com.ykononenko.model.LengthUnit
+import com.ykononenko.model.MeasurementColor
+import com.ykononenko.model.MeasurementData
 import com.ykononenko.model.NorthArrowData
 import com.ykononenko.model.NorthArrowStyle
 import com.ykononenko.model.RulerStyle
@@ -123,9 +128,22 @@ class BottomBarModel(val controls: List<Control>) {
                     onSelect = { session, style -> session.selectNorthStyle(style) },
                     buttonLabel = { "Цвет указателя" }
                 ),
+                SelectControl(
+                    title = "Цвет точек и линии",
+                    size = DpSize(170.dp, 48.dp),
+                    row = ControlRow.TOOLS,
+                    order = 22,
+                    visible = { it.appState == AppState.MEASURING },
+                    options = MeasurementColor.entries,
+                    optionLabel = { it.label },
+                    selected = { it.measurementColor },
+                    onSelect = { session, color -> session.selectMeasurementColor(color) },
+                    buttonLabel = { "Цвет точек и линии" }
+                ),
+                DeleteMeasurementButton(),
                 BatchButton(),
                 AddNorthButton(
-                    from = setOf(AppState.RULER_PLACED),
+                    from = setOf(AppState.RULER_PLACED, AppState.MEASURING),
                     row = ControlRow.TOOLS,
                     order = 60
                 ),
@@ -148,10 +166,24 @@ class BottomBarModel(val controls: List<Control>) {
                     row = ControlRow.PRIMARY,
                     order = 0
                 ),
+                SliderControl(
+                    title = "Размер шрифта: ",
+                    size = DpSize(160.dp, 48.dp),
+                    row = ControlRow.PRIMARY,
+                    order = 40,
+                    visible = { it.appState == AppState.MEASURING },
+                    value = { it.measurementFontSize },
+                    range = MeasurementData.MIN_FONT_PX..MeasurementData.MAX_FONT_PX,
+                    onValueChange = { session, value -> session.updateMeasurementFontSize(value) },
+                    valueLabel = { "${it.roundToInt()} px" }
+                ),
                 LoadPhotoButton(),
                 StartPointPlacementButton(),
+                StartMeasurementButton(),
                 SavePointButton(number = 1),
                 SavePointButton(number = 2),
+                SaveMeasurementPointButton(number = 1),
+                SaveMeasurementPointButton(number = 2),
                 BuildRulerButton(),
                 SaveImageButton()
             )

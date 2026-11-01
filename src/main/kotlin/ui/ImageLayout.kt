@@ -3,6 +3,7 @@ package com.ykononenko.ui
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.ImageBitmap
+import com.ykononenko.model.Point
 
 /**
  * Геометрия отображения изображения внутри Canvas.
@@ -66,3 +67,9 @@ fun imageToCanvas(imageOffset: Offset, layout: ImageLayout): Offset {
         imageOffset.y * layout.scale + layout.offsetY
     )
 }
+
+/** Переводит точку Canvas в точку модели. */
+fun Offset.toPoint(): Point = Point(x, y)
+
+/** Переводит точку модели в точку Canvas. */
+fun Point.toOffset(): Offset = Offset(x, y)

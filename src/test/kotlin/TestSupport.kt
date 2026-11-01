@@ -1,6 +1,5 @@
 package com.ykononenko
 
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import com.ykononenko.controls.AppSettings
@@ -11,10 +10,15 @@ import com.ykononenko.controls.ImageFileService
 import com.ykononenko.controls.SettingsStore
 import com.ykononenko.controls.buttons.BuildRulerButton
 import com.ykononenko.controls.buttons.ConfirmAddNorthButton
+import com.ykononenko.controls.buttons.ConfirmStartMeasurementButton
+import com.ykononenko.controls.buttons.SaveMeasurementPointButton
 import com.ykononenko.controls.buttons.SavePointButton
+import com.ykononenko.controls.buttons.StartMeasurementButton
 import com.ykononenko.controls.buttons.StartPointPlacementButton
 import com.ykononenko.model.LengthUnit
+import com.ykononenko.model.Measurement
 import com.ykononenko.model.NorthArrowData
+import com.ykononenko.model.Point
 import com.ykononenko.model.RulerData
 import org.jetbrains.skia.Surface
 
@@ -47,18 +51,28 @@ class FakeImageFileService(
     var savedUnit: LengthUnit? = null
         private set
 
+    var savedMeasurements: List<Measurement> = emptyList()
+        private set
+
+    var savedMeasurementFontSize: Float? = null
+        private set
+
     override fun openImage(): ImageBitmap? = imageToOpen
 
     override fun saveImage(
         image: ImageBitmap,
         ruler: RulerData?,
         northArrow: NorthArrowData?,
+        measurements: List<Measurement>,
+        measurementFontSize: Float,
         unit: LengthUnit
     ): Boolean {
         saveCalls += 1
         savedImage = image
         savedRuler = ruler
         savedNorthArrow = northArrow
+        savedMeasurements = measurements
+        savedMeasurementFontSize = measurementFontSize
         savedUnit = unit
         return saveResult
     }
@@ -125,9 +139,9 @@ fun sessionWithPoints(
     settingsStore: SettingsStore = FakeSettingsStore()
 ): EditorSession {
     val session = awaitingPoint1Session(service, settingsStore)
-    session.setPendingPoint(Offset(20f, 30f))
+    session.setPendingPoint(Point(20f, 30f))
     SavePointButton(1).action(session)
-    session.setPendingPoint(Offset(120f, 90f))
+    session.setPendingPoint(Point(120f, 90f))
     SavePointButton(2).action(session)
     return session
 }
@@ -149,6 +163,43 @@ fun sessionWithNorth(
     val session = photoLoadedSession(service, settingsStore)
     session.requestAddNorth()
     ConfirmAddNorthButton().action(session)
+    return session
+}
+
+fun sessionWithRulerAndNorth(
+    service: FakeImageFileService = FakeImageFileService(),
+    settingsStore: SettingsStore = FakeSettingsStore()
+): EditorSession {
+    val session = sessionWithRuler(service, settingsStore)
+    session.requestAddNorth()
+    ConfirmAddNorthButton().action(session)
+    return session
+}
+
+fun measuringSession(
+    service: FakeImageFileService = FakeImageFileService(),
+    settingsStore: SettingsStore = FakeSettingsStore(),
+    withNorth: Boolean = false
+): EditorSession {
+    val session = if (withNorth) {
+        sessionWithRulerAndNorth(service, settingsStore)
+    } else {
+        sessionWithRuler(service, settingsStore)
+    }
+    StartMeasurementButton().action(session)
+    ConfirmStartMeasurementButton().action(session)
+    return session
+}
+
+fun sessionWithMeasurement(
+    service: FakeImageFileService = FakeImageFileService(),
+    settingsStore: SettingsStore = FakeSettingsStore()
+): EditorSession {
+    val session = measuringSession(service, settingsStore)
+    session.setMeasurementPoint(Point(20f, 30f))
+    SaveMeasurementPointButton(1).action(session)
+    session.setMeasurementPoint(Point(120f, 30f))
+    SaveMeasurementPointButton(2).action(session)
     return session
 }
 

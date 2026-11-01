@@ -3,6 +3,8 @@ package com.ykononenko.logic
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import com.ykononenko.model.LengthUnit
+import com.ykononenko.model.Measurement
+import com.ykononenko.model.MeasurementData
 import com.ykononenko.model.NorthArrowData
 import com.ykononenko.model.RulerData
 import org.jetbrains.skia.Image as SkiaImage
@@ -25,19 +27,23 @@ object ImageConverter {
      * @param ruler линейка или `null`, если наносится только указатель на север
      * @param northArrow указатель на север или `null`
      * @param unit единица измерения для подписей линейки
+     * @param measurements размерные линии в координатах изображения
+     * @param measurementFontSize размер шрифта подписей размерных линий
      * @return готовая к сохранению [Surface] или `null` при ошибке чтения
      */
     fun fileToSurface(
         file: File,
         ruler: RulerData?,
         northArrow: NorthArrowData?,
-        unit: LengthUnit
+        unit: LengthUnit,
+        measurements: List<Measurement> = emptyList(),
+        measurementFontSize: Float = MeasurementData.DEFAULT_FONT_PX
     ): Surface? {
         return try {
             val bytes = file.readBytes()
             val skiaImage = SkiaImage.makeFromEncoded(bytes)
             val image = skiaImage.toComposeImageBitmap()
-            imageToSurface(image, ruler, northArrow, unit)
+            imageToSurface(image, ruler, northArrow, unit, measurements, measurementFontSize)
         } catch (e: Exception) {
             e.printStackTrace()
             null
@@ -52,15 +58,19 @@ object ImageConverter {
      * @param ruler линейка для наложения или `null`, чтобы вернуть только изображение
      * @param northArrow указатель на север или `null`
      * @param unit единица измерения для подписей линейки
+     * @param measurements размерные линии в координатах изображения
+     * @param measurementFontSize размер шрифта подписей размерных линий
      * @return поверхность в разрешении исходного изображения
      */
     fun bitmapToSurface(
         image: ImageBitmap,
         ruler: RulerData?,
         northArrow: NorthArrowData?,
-        unit: LengthUnit
+        unit: LengthUnit,
+        measurements: List<Measurement> = emptyList(),
+        measurementFontSize: Float = MeasurementData.DEFAULT_FONT_PX
     ): Surface {
-        return imageToSurface(image, ruler, northArrow, unit)
+        return imageToSurface(image, ruler, northArrow, unit, measurements, measurementFontSize)
     }
 
     /**
@@ -71,13 +81,17 @@ object ImageConverter {
      * @param ruler линейка для наложения или `null`
      * @param northArrow указатель на север или `null`
      * @param unit единица измерения для подписей линейки
+     * @param measurements размерные линии в координатах изображения
+     * @param measurementFontSize размер шрифта подписей размерных линий
      * @return растровая поверхность размером с изображение
      */
     private fun imageToSurface(
         image: ImageBitmap,
         ruler: RulerData?,
         northArrow: NorthArrowData?,
-        unit: LengthUnit
+        unit: LengthUnit,
+        measurements: List<Measurement>,
+        measurementFontSize: Float
     ): Surface {
         val w = image.width
         val h = image.height
@@ -101,6 +115,16 @@ object ImageConverter {
 
         if (ruler != null) {
             RulerRenderers.of(ruler.style).draw(canvas, ruler, 1f, ruler.x, ruler.y, unit)
+            MeasurementRenderer.draw(
+                canvas = canvas,
+                measurements = measurements,
+                ruler = ruler,
+                unit = unit,
+                fontSizePx = measurementFontSize,
+                scale = 1f,
+                offsetX = 0f,
+                offsetY = 0f
+            )
         }
 
         if (northArrow != null) {

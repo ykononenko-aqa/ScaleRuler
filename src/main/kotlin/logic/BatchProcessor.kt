@@ -1,6 +1,8 @@
 package com.ykononenko.logic
 
 import com.ykononenko.model.LengthUnit
+import com.ykononenko.model.Measurement
+import com.ykononenko.model.MeasurementData
 import com.ykononenko.model.NorthArrowData
 import com.ykononenko.model.RulerData
 import org.jetbrains.skia.Image as SkiaImage
@@ -27,6 +29,9 @@ object BatchProcessor {
      *   `null`, если наносится только указатель на север
      * @param northArrow указатель на север или `null`
      * @param unit единица измерения для подписей линейки
+     * @param measurements размерные линии в координатах текущего изображения;
+     *   координаты переносятся на все фото без масштабирования
+     * @param measurementFontSize размер шрифта подписей размерных линий
      * @param onProgress обратный вызов прогресса: номер текущего файла, всего
      *   файлов и имя обрабатываемого файла
      * @return количество успешно обработанных файлов
@@ -37,6 +42,8 @@ object BatchProcessor {
         ruler: RulerData?,
         northArrow: NorthArrowData?,
         unit: LengthUnit,
+        measurements: List<Measurement> = emptyList(),
+        measurementFontSize: Float = MeasurementData.DEFAULT_FONT_PX,
         onProgress: (current: Int, total: Int, fileName: String) -> Unit
     ): Int {
         val extensions = listOf("jpg", "jpeg", "png", "bmp")
@@ -60,7 +67,14 @@ object BatchProcessor {
                 }
 
                 // Отрисовываем с скорректированной линейкой
-                val surface = ImageConverter.fileToSurface(file, adjustedRuler, adjustedNorth, unit)
+                val surface = ImageConverter.fileToSurface(
+                    file = file,
+                    ruler = adjustedRuler,
+                    northArrow = adjustedNorth,
+                    unit = unit,
+                    measurements = measurements,
+                    measurementFontSize = measurementFontSize
+                )
                 if (surface != null) {
                     val targetFile = File(targetDir, file.nameWithoutExtension + ".png")
                     ImageConverter.surfaceToFile(surface, targetFile)

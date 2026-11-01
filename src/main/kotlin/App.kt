@@ -7,13 +7,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.ykononenko.controls.EditorSession
+import com.ykononenko.controls.MeasurementDeleteWarning
+import com.ykononenko.controls.MeasurementModeWarning
 import com.ykononenko.controls.NorthArrowWarning
 import com.ykononenko.controls.buttons.ConfirmAddNorthButton
+import com.ykononenko.controls.buttons.ConfirmDeleteMeasurementButton
+import com.ykononenko.controls.buttons.ConfirmStartMeasurementButton
 import com.ykononenko.controls.buttons.LoadPhotoButton
-import com.ykononenko.state.AppState
 import com.ykononenko.ui.BatchDialog
 import com.ykononenko.ui.BottomBar
 import com.ykononenko.ui.MainArea
+import com.ykononenko.ui.MeasurementDeleteWarningDialog
+import com.ykononenko.ui.MeasurementModeWarningDialog
 import com.ykononenko.ui.NorthWarningDialog
 import com.ykononenko.ui.SwingImageFileService
 import com.ykononenko.ui.TopBar
@@ -31,6 +36,8 @@ fun App(onExit: () -> Unit = {}) {
     val session = remember { EditorSession(SwingImageFileService()) }
     val loadPhotoButton = remember { LoadPhotoButton() }
     val confirmAddNorthButton = remember { ConfirmAddNorthButton() }
+    val confirmStartMeasurementButton = remember { ConfirmStartMeasurementButton() }
+    val confirmDeleteMeasurementButton = remember { ConfirmDeleteMeasurementButton() }
 
     MaterialTheme {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -51,9 +58,25 @@ fun App(onExit: () -> Unit = {}) {
 
         if (NorthArrowWarning.shouldShow(session)) {
             NorthWarningDialog(
-                rulerPlaced = session.appState == AppState.RULER_PLACED,
+                rulerPlaced = session.ruler != null,
                 onConfirm = { confirmAddNorthButton.action(session) },
                 onDismiss = { session.dismissNorthWarning() }
+            )
+        }
+
+        if (MeasurementModeWarning.shouldShow(session)) {
+            MeasurementModeWarningDialog(
+                onConfirm = { confirmStartMeasurementButton.action(session) },
+                onDismiss = { session.dismissMeasurementModeWarning() }
+            )
+        }
+
+        if (MeasurementDeleteWarning.shouldShow(session)) {
+            MeasurementDeleteWarningDialog(
+                inProgress = session.measurements.pendingPoint != null ||
+                    session.measurements.point1 != null,
+                onConfirm = { confirmDeleteMeasurementButton.action(session) },
+                onDismiss = { session.dismissDeleteMeasurementWarning() }
             )
         }
 
@@ -61,6 +84,8 @@ fun App(onExit: () -> Unit = {}) {
             BatchDialog(
                 ruler = session.ruler,
                 northArrow = session.northArrow,
+                measurements = session.measurements.items,
+                measurementFontSize = session.measurementFontSize,
                 unit = session.unit,
                 onDismiss = { session.dismissBatch() }
             )

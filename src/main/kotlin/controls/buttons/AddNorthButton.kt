@@ -26,7 +26,14 @@ class AddNorthButton(
     order = order
 ) {
 
+    override fun displayTitle(session: EditorSession): String =
+        if (session.northArrow != null) "Вернуться к указателю" else title
+
     override fun perform(session: EditorSession): Boolean {
+        if (session.northArrow != null) {
+            session.clearMeasurementInProgress()
+            return true
+        }
         if (session.suppressWarnings) {
             return session.createNorthArrow()
         }

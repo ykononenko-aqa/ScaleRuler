@@ -14,7 +14,7 @@ class SaveImageButton(
     order: Int = 50
 ) : StateButton(
     title = "Сохранить изображение",
-    from = setOf(AppState.RULER_PLACED, AppState.NORTH_PLACED),
+    from = setOf(AppState.RULER_PLACED, AppState.NORTH_PLACED, AppState.MEASURING),
     size = size,
     row = row,
     order = order

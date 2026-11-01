@@ -5,6 +5,7 @@ import androidx.compose.ui.graphics.toComposeImageBitmap
 import com.ykononenko.controls.ImageFileService
 import com.ykononenko.logic.ImageConverter
 import com.ykononenko.model.LengthUnit
+import com.ykononenko.model.Measurement
 import com.ykononenko.model.NorthArrowData
 import com.ykononenko.model.RulerData
 import org.jetbrains.skia.Image as SkiaImage
@@ -40,6 +41,8 @@ class SwingImageFileService : ImageFileService {
         image: ImageBitmap,
         ruler: RulerData?,
         northArrow: NorthArrowData?,
+        measurements: List<Measurement>,
+        measurementFontSize: Float,
         unit: LengthUnit
     ): Boolean {
         val chooser = JFileChooser().apply {
@@ -52,7 +55,14 @@ class SwingImageFileService : ImageFileService {
         val out = if (file.extension.isBlank()) File("${file.absolutePath}.png") else file
 
         return try {
-            val surface = ImageConverter.bitmapToSurface(image, ruler, northArrow, unit)
+            val surface = ImageConverter.bitmapToSurface(
+                image = image,
+                ruler = ruler,
+                northArrow = northArrow,
+                measurements = measurements,
+                measurementFontSize = measurementFontSize,
+                unit = unit
+            )
             ImageConverter.surfaceToFile(surface, out)
             true
         } catch (e: Exception) {
