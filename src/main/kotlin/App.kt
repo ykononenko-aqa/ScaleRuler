@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.ykononenko.controls.EditorSession
+import com.ykononenko.controls.NorthArrowWarning
 import com.ykononenko.controls.buttons.ConfirmAddNorthButton
 import com.ykononenko.controls.buttons.LoadPhotoButton
 import com.ykononenko.state.AppState
@@ -35,7 +36,9 @@ fun App(onExit: () -> Unit = {}) {
         Column(modifier = Modifier.fillMaxSize()) {
             TopBar(
                 onLoadPhoto = { loadPhotoButton.action(session) },
-                onExit = onExit
+                onExit = onExit,
+                suppressWarnings = session.suppressWarnings,
+                onSuppressWarningsChange = session::updateSuppressWarnings
             )
 
             MainArea(
@@ -46,7 +49,7 @@ fun App(onExit: () -> Unit = {}) {
             BottomBar(session = session)
         }
 
-        if (session.showNorthWarning) {
+        if (NorthArrowWarning.shouldShow(session)) {
             NorthWarningDialog(
                 rulerPlaced = session.appState == AppState.RULER_PLACED,
                 onConfirm = { confirmAddNorthButton.action(session) },

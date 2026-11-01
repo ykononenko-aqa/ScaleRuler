@@ -2,6 +2,7 @@ package com.ykononenko.controls
 
 import androidx.compose.ui.geometry.Offset
 import com.ykononenko.FakeImageFileService
+import com.ykononenko.FakeSettingsStore
 import com.ykononenko.awaitingPoint1Session
 import com.ykononenko.photoLoadedSession
 import com.ykononenko.sessionWithNorth
@@ -25,7 +26,10 @@ class BottomBarModelTest {
     @Test
     fun idleShowsOnlyLoadPhotoButton() {
         val model = BottomBarModel.default()
-        val session = EditorSession(FakeImageFileService())
+        val session = EditorSession(
+            FakeImageFileService(),
+            settingsStore = FakeSettingsStore()
+        )
 
         val controls = model.visibleRows(session).flatten()
 
