@@ -2,6 +2,7 @@ package com.ykononenko.controls
 
 import androidx.compose.ui.graphics.ImageBitmap
 import com.ykononenko.model.LengthUnit
+import com.ykononenko.model.Measurement
 import com.ykononenko.model.NorthArrowData
 import com.ykononenko.model.RulerData
 
@@ -21,8 +22,8 @@ interface ImageFileService {
     fun openImage(): ImageBitmap?
 
     /**
-     * Открывает диалог сохранения и записывает изображение вместе с линейкой и
-     * указателем на север в PNG.
+     * Открывает диалог сохранения и записывает изображение вместе с линейкой,
+     * указателем на север и размерными линиями в PNG.
      *
      * @return `true`, если файл успешно сохранён; иначе `false`
      */
@@ -30,6 +31,8 @@ interface ImageFileService {
         image: ImageBitmap,
         ruler: RulerData?,
         northArrow: NorthArrowData?,
+        measurements: List<Measurement>,
+        measurementFontSize: Float,
         unit: LengthUnit
     ): Boolean
 }

@@ -12,8 +12,12 @@ import com.ykononenko.logic.distanceBetween
 import com.ykononenko.model.AppPoints
 import com.ykononenko.model.Corner
 import com.ykononenko.model.LengthUnit
+import com.ykononenko.model.Measurement
+import com.ykononenko.model.MeasurementColor
+import com.ykononenko.model.MeasurementData
 import com.ykononenko.model.NorthArrowData
 import com.ykononenko.model.NorthArrowStyle
+import com.ykononenko.model.Point
 import com.ykononenko.model.RulerData
 import com.ykononenko.model.RulerStyle
 import com.ykononenko.state.AppState
@@ -57,6 +61,18 @@ class EditorSession(
     var points: AppPoints by mutableStateOf(AppPoints())
         private set
 
+    /** Размерные линии и незавершённые точки режима измерений. */
+    var measurements: MeasurementData by mutableStateOf(MeasurementData())
+        private set
+
+    /** Цвет новых размерных линий. */
+    var measurementColor: MeasurementColor by mutableStateOf(MeasurementColor.BLACK)
+        private set
+
+    /** Размер шрифта подписей размерных линий в пикселях. */
+    var measurementFontSize: Float by mutableStateOf(MeasurementData.DEFAULT_FONT_PX)
+        private set
+
     /** Размещённая линейка или `null`. */
     var ruler: RulerData? by mutableStateOf(null)
         private set
@@ -93,6 +109,20 @@ class EditorSession(
     var showNorthWarning: Boolean by mutableStateOf(false)
         private set
 
+    /** Показывать ли предупреждение перед входом в режим измерений. */
+    var showMeasurementModeWarning: Boolean by mutableStateOf(false)
+        private set
+
+    /** Показывать ли предупреждение перед удалением измерения. */
+    var showMeasurementDeleteWarning: Boolean by mutableStateOf(false)
+        private set
+
+    /** Есть ли что удалять в режиме измерений. */
+    val hasMeasurementToDelete: Boolean
+        get() = measurements.pendingPoint != null ||
+            measurements.point1 != null ||
+            measurements.items.isNotEmpty()
+
     /** Показывать ли диалог пакетной обработки. */
     var showBatchDialog: Boolean by mutableStateOf(false)
         private set
@@ -118,9 +148,12 @@ class EditorSession(
         scaleText = DEFAULT_SCALE_TEXT
         unit = LengthUnit.MM
         points = AppPoints()
+        measurements = MeasurementData()
         ruler = null
         northArrow = null
         showNorthWarning = false
+        showMeasurementModeWarning = false
+        showMeasurementDeleteWarning = false
         showBatchDialog = false
     }
 
@@ -177,6 +210,7 @@ class EditorSession(
             ruler = null
         }
         showNorthWarning = false
+        clearMeasurementInProgress()
         return true
     }
 
@@ -187,12 +221,81 @@ class EditorSession(
      */
     fun saveImage(): Boolean {
         val image = image ?: return false
-        return fileService.saveImage(image, ruler, northArrow, unit)
+        return fileService.saveImage(
+            image = image,
+            ruler = ruler,
+            northArrow = northArrow,
+            measurements = measurements.items,
+            measurementFontSize = measurementFontSize,
+            unit = unit
+        )
     }
 
     /** Запоминает точку клика в координатах изображения. */
-    fun setPendingPoint(imagePoint: Offset) {
+    fun setPendingPoint(imagePoint: Point) {
         points = points.copy(pendingPoint = imagePoint)
+    }
+
+    /** Запоминает временную точку режима измерений в координатах изображения. */
+    fun setMeasurementPoint(imagePoint: Point) {
+        measurements = measurements.copy(pendingPoint = imagePoint)
+    }
+
+    /**
+     * Фиксирует ожидающую точку как первую или завершает линию второй точкой.
+     *
+     * @param number номер точки: `1` или `2`
+     * @return `true`, если точка зафиксирована или линия создана
+     */
+    fun commitMeasurementPoint(number: Int): Boolean {
+        val pending = measurements.pendingPoint ?: return false
+        measurements = when (number) {
+            1 -> measurements.copy(point1 = pending, pendingPoint = null)
+            2 -> {
+                val first = measurements.point1 ?: return false
+                measurements.copy(
+                    items = measurements.items + Measurement(first, pending, measurementColor),
+                    point1 = null,
+                    pendingPoint = null
+                )
+            }
+
+            else -> return false
+        }
+        return true
+    }
+
+    /**
+     * Удаляет незавершённую точку или последнюю завершённую линию.
+     */
+    fun removeLastMeasurement() {
+        val current = measurements
+        measurements = when {
+            current.pendingPoint != null -> current.copy(pendingPoint = null)
+            current.point1 != null -> current.copy(point1 = null)
+            current.items.isNotEmpty() -> current.copy(items = current.items.dropLast(1))
+            else -> current
+        }
+        showMeasurementDeleteWarning = false
+    }
+
+    /** Выбирает цвет для новых размерных линий. */
+    fun selectMeasurementColor(color: MeasurementColor) {
+        measurementColor = color
+    }
+
+    /** Устанавливает размер шрифта подписей размерных линий. */
+    fun updateMeasurementFontSize(value: Float) {
+        measurementFontSize = value.coerceIn(
+            MeasurementData.MIN_FONT_PX,
+            MeasurementData.MAX_FONT_PX
+        )
+    }
+
+    /** Очищает незавершённые точки текущей линии, не удаляя готовые линии. */
+    fun clearMeasurementInProgress() {
+        measurements = measurements.copy(pendingPoint = null, point1 = null)
+        showMeasurementDeleteWarning = false
     }
 
     /** Смещает линейку на заданное расстояние в пикселях изображения. */
@@ -294,6 +397,32 @@ class EditorSession(
     /** Закрывает предупреждение без добавления указателя. */
     fun dismissNorthWarning() {
         showNorthWarning = false
+    }
+
+    /** Открывает предупреждение перед входом в режим измерений. */
+    fun requestMeasurementMode() {
+        showMeasurementModeWarning = true
+    }
+
+    /** Закрывает предупреждение без входа в режим измерений. */
+    fun dismissMeasurementModeWarning() {
+        showMeasurementModeWarning = false
+    }
+
+    /** Открывает предупреждение перед удалением измерения. */
+    fun requestDeleteMeasurement() {
+        if (hasMeasurementToDelete) showMeasurementDeleteWarning = true
+    }
+
+    /** Закрывает предупреждение без удаления. */
+    fun dismissDeleteMeasurementWarning() {
+        showMeasurementDeleteWarning = false
+    }
+
+    /** Подтверждает удаление и закрывает предупреждение. */
+    fun confirmDeleteMeasurement() {
+        showMeasurementDeleteWarning = false
+        removeLastMeasurement()
     }
 
     /** Открывает диалог пакетной обработки. */

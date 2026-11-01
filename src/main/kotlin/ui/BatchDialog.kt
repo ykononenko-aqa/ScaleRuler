@@ -10,6 +10,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.ykononenko.logic.BatchProcessor
 import com.ykononenko.model.LengthUnit
+import com.ykononenko.model.Measurement
 import com.ykononenko.model.NorthArrowData
 import com.ykononenko.model.RulerData
 import kotlinx.coroutines.Dispatchers
@@ -27,6 +28,8 @@ import javax.swing.JFileChooser
  * @param ruler линейка, задающая масштаб для всех изображений, или `null`, если
  *   наносится только указатель на север
  * @param northArrow указатель на север или `null`
+ * @param measurements размерные линии для нанесения на все фото
+ * @param measurementFontSize размер шрифта подписей размерных линий
  * @param unit единица измерения для подписей линейки
  * @param onDismiss закрытие диалога
  */
@@ -34,6 +37,8 @@ import javax.swing.JFileChooser
 fun BatchDialog(
     ruler: RulerData?,
     northArrow: NorthArrowData?,
+    measurements: List<Measurement>,
+    measurementFontSize: Float,
     unit: LengthUnit,
     onDismiss: () -> Unit
 ) {
@@ -136,6 +141,8 @@ fun BatchDialog(
                                                     ruler = ruler,
                                                     northArrow = northArrow,
                                                     unit = unit,
+                                                    measurements = measurements,
+                                                    measurementFontSize = measurementFontSize,
                                                     onProgress = { cur, tot, file ->
                                                         progress = cur
                                                         total = tot

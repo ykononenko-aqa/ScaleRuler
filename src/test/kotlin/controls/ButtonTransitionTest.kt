@@ -1,24 +1,30 @@
 package com.ykononenko.controls
 
-import androidx.compose.ui.geometry.Offset
 import com.ykononenko.FakeImageFileService
 import com.ykononenko.FakeSettingsStore
 import com.ykononenko.awaitingPoint1Session
+import com.ykononenko.measuringSession
 import com.ykononenko.photoLoadedSession
 import com.ykononenko.press
+import com.ykononenko.sessionWithMeasurement
 import com.ykononenko.sessionWithNorth
 import com.ykononenko.sessionWithPoints
 import com.ykononenko.sessionWithRuler
+import com.ykononenko.sessionWithRulerAndNorth
 import com.ykononenko.testImage
 import com.ykononenko.controls.buttons.BatchButton
 import com.ykononenko.controls.buttons.BuildRulerButton
 import com.ykononenko.controls.buttons.ConfirmAddNorthButton
+import com.ykononenko.controls.buttons.ConfirmDeleteMeasurementButton
+import com.ykononenko.controls.buttons.ConfirmStartMeasurementButton
 import com.ykononenko.controls.buttons.MoveToCornerButton
 import com.ykononenko.controls.buttons.SaveImageButton
 import com.ykononenko.controls.buttons.SavePointButton
+import com.ykononenko.controls.buttons.StartMeasurementButton
 import com.ykononenko.controls.buttons.StartPointPlacementButton
 import com.ykononenko.controls.buttons.ToggleOrientationButton
 import com.ykononenko.model.Corner
+import com.ykononenko.model.Point
 import com.ykononenko.state.AppState
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -89,19 +95,19 @@ class ButtonTransitionTest {
     @Test
     fun saveFirstPointCommitsAndAdvances() {
         val session = awaitingPoint1Session()
-        session.setPendingPoint(Offset(11f, 22f))
+        session.setPendingPoint(Point(11f, 22f))
 
         SavePointButton(1).action(session)
 
         assertEquals(AppState.AWAITING_POINT_2, session.appState)
-        assertEquals(Offset(11f, 22f), session.points.point1)
+        assertEquals(Point(11f, 22f), session.points.point1)
         assertNull(session.points.pendingPoint)
     }
 
     @Test
     fun saveSecondPointRequiresPendingPoint() {
         val session = awaitingPoint1Session()
-        session.setPendingPoint(Offset(1f, 1f))
+        session.setPendingPoint(Point(1f, 1f))
         SavePointButton(1).action(session)
         assertEquals(AppState.AWAITING_POINT_2, session.appState)
 
@@ -115,14 +121,14 @@ class ButtonTransitionTest {
     @Test
     fun saveSecondPointCommitsAndCompletesPoints() {
         val session = awaitingPoint1Session()
-        session.setPendingPoint(Offset(10f, 20f))
+        session.setPendingPoint(Point(10f, 20f))
         SavePointButton(1).action(session)
-        session.setPendingPoint(Offset(80f, 70f))
+        session.setPendingPoint(Point(80f, 70f))
 
         SavePointButton(2).action(session)
 
         assertEquals(AppState.POINTS_SET, session.appState)
-        assertEquals(Offset(80f, 70f), session.points.point2)
+        assertEquals(Point(80f, 70f), session.points.point2)
         assertNull(session.points.pendingPoint)
     }
 
@@ -312,5 +318,136 @@ class ButtonTransitionTest {
 
         assertTrue(session.showBatchDialog)
         assertEquals(state, session.appState)
+    }
+
+    @Test
+    fun startMeasurementWarnsFromRulerPlacedAndConfirms() {
+        val session = sessionWithRuler()
+
+        session.press("StartMeasurementButton")
+
+        assertTrue(session.showMeasurementModeWarning)
+        assertEquals(AppState.RULER_PLACED, session.appState)
+
+        ConfirmStartMeasurementButton().action(session)
+
+        assertEquals(AppState.MEASURING, session.appState)
+        assertFalse(session.showMeasurementModeWarning)
+    }
+
+    @Test
+    fun startMeasurementWarnsFromNorthPlacedWithRuler() {
+        val session = sessionWithRulerAndNorth()
+        assertNotNull(session.ruler)
+
+        session.press("StartMeasurementButton")
+        assertTrue(session.showMeasurementModeWarning)
+        assertEquals(AppState.NORTH_PLACED, session.appState)
+
+        ConfirmStartMeasurementButton().action(session)
+
+        assertEquals(AppState.MEASURING, session.appState)
+    }
+
+    @Test
+    fun startMeasurementDoesNothingWithoutRuler() {
+        val session = sessionWithNorth()
+        assertNull(session.ruler)
+
+        StartMeasurementButton().action(session)
+
+        assertEquals(AppState.NORTH_PLACED, session.appState)
+        assertFalse(session.showMeasurementModeWarning)
+    }
+
+    @Test
+    fun startMeasurementEntersSilentlyWhenWarningsSuppressed() {
+        val session = sessionWithRuler()
+        session.updateSuppressWarnings(true)
+
+        session.press("StartMeasurementButton")
+
+        assertEquals(AppState.MEASURING, session.appState)
+        assertFalse(session.showMeasurementModeWarning)
+    }
+
+    @Test
+    fun deleteMeasurementWarnsAndConfirms() {
+        val session = measuringSession()
+        session.setMeasurementPoint(Point(1f, 2f))
+
+        session.press("DeleteMeasurementButton")
+
+        assertTrue(session.showMeasurementDeleteWarning)
+        assertEquals(Point(1f, 2f), session.measurements.pendingPoint)
+        assertEquals(AppState.MEASURING, session.appState)
+
+        ConfirmDeleteMeasurementButton().action(session)
+
+        assertNull(session.measurements.pendingPoint)
+        assertFalse(session.showMeasurementDeleteWarning)
+        assertEquals(AppState.MEASURING, session.appState)
+    }
+
+    @Test
+    fun deleteMeasurementRemovesSilentlyWhenWarningsSuppressed() {
+        val session = sessionWithMeasurement()
+        session.updateSuppressWarnings(true)
+
+        session.press("DeleteMeasurementButton")
+
+        assertTrue(session.measurements.items.isEmpty())
+        assertFalse(session.showMeasurementDeleteWarning)
+    }
+
+    @Test
+    fun addNorthFromMeasuringReturnsToExistingArrowWithoutRecreatingIt() {
+        val session = measuringSession(withNorth = true)
+        val arrow = session.northArrow
+        val ruler = session.ruler
+        session.setMeasurementPoint(Point(5f, 6f))
+
+        session.press("AddNorthButton")
+
+        assertEquals(AppState.NORTH_PLACED, session.appState)
+        assertEquals(arrow, session.northArrow)
+        assertEquals(ruler, session.ruler)
+        assertNull(session.measurements.pendingPoint)
+    }
+
+    @Test
+    fun addNorthFromMeasuringCreatesArrowAndKeepsRuler() {
+        val session = measuringSession()
+        val ruler = session.ruler
+        session.setMeasurementPoint(Point(5f, 6f))
+
+        session.press("AddNorthButton")
+        assertTrue(session.showNorthWarning)
+        assertEquals(AppState.MEASURING, session.appState)
+
+        ConfirmAddNorthButton().action(session)
+
+        assertEquals(AppState.NORTH_PLACED, session.appState)
+        assertNotNull(session.northArrow)
+        assertEquals(ruler, session.ruler)
+        assertNull(session.measurements.pendingPoint)
+    }
+
+    @Test
+    fun saveAndBatchWorkFromMeasuring() {
+        val service = FakeImageFileService()
+        val session = sessionWithMeasurement(service)
+        assertEquals(AppState.MEASURING, session.appState)
+
+        SaveImageButton().action(session)
+
+        assertEquals(1, service.saveCalls)
+        assertEquals(session.measurements.items, service.savedMeasurements)
+        assertEquals(AppState.MEASURING, session.appState)
+
+        BatchButton().action(session)
+
+        assertTrue(session.showBatchDialog)
+        assertEquals(AppState.MEASURING, session.appState)
     }
 }

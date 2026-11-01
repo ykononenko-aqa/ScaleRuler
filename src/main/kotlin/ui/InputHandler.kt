@@ -41,6 +41,9 @@ private enum class DragMode {
  * В состоянии [AppState.RULER_PLACED] без указателя перетаскивание перемещает
  * линейку. При наличии указателя, а также в [AppState.NORTH_PLACED],
  * перетаскивание перемещает или поворачивает указатель.
+ *
+ * В [AppState.MEASURING] обрабатываются только одиночные тапы для точек
+ * размерных линий; перетаскивание линейки и указателя отключено.
  */
 @Composable
 fun Modifier.canvasInput(
@@ -54,7 +57,14 @@ fun Modifier.canvasInput(
             AppState.AWAITING_POINT_1, AppState.AWAITING_POINT_2 -> {
                 detectTapGestures { tapOffset ->
                     val current = currentLayout ?: return@detectTapGestures
-                    session.setPendingPoint(canvasToImage(tapOffset, current))
+                    session.setPendingPoint(canvasToImage(tapOffset, current).toPoint())
+                }
+            }
+
+            AppState.MEASURING -> {
+                detectTapGestures { tapOffset ->
+                    val current = currentLayout ?: return@detectTapGestures
+                    session.setMeasurementPoint(canvasToImage(tapOffset, current).toPoint())
                 }
             }
 

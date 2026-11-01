@@ -1,14 +1,16 @@
 package com.ykononenko.controls
 
-import androidx.compose.ui.geometry.Offset
 import com.ykononenko.FakeImageFileService
 import com.ykononenko.FakeSettingsStore
 import com.ykononenko.awaitingPoint1Session
+import com.ykononenko.measuringSession
 import com.ykononenko.photoLoadedSession
 import com.ykononenko.sessionWithNorth
 import com.ykononenko.sessionWithPoints
 import com.ykononenko.sessionWithRuler
+import com.ykononenko.sessionWithRulerAndNorth
 import com.ykononenko.controls.buttons.SavePointButton
+import com.ykononenko.model.Point
 import com.ykononenko.state.AppState
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -69,7 +71,7 @@ class BottomBarModelTest {
 
         assertEquals(1, saveControls.size)
 
-        session.setPendingPoint(Offset(5f, 5f))
+        session.setPendingPoint(Point(5f, 5f))
         (saveControls.single() as ButtonControl).action(session)
 
         assertEquals(AppState.AWAITING_POINT_2, session.appState)
@@ -79,7 +81,7 @@ class BottomBarModelTest {
     fun awaitingPoint2ShowsSaveSecondPointButton() {
         val model = BottomBarModel.default()
         val session = awaitingPoint1Session()
-        session.setPendingPoint(Offset(5f, 5f))
+        session.setPendingPoint(Point(5f, 5f))
         SavePointButton(1).action(session)
         assertEquals(AppState.AWAITING_POINT_2, session.appState)
 
@@ -88,7 +90,7 @@ class BottomBarModelTest {
 
         assertEquals(1, saveControls.size)
 
-        session.setPendingPoint(Offset(15f, 15f))
+        session.setPendingPoint(Point(15f, 15f))
         (saveControls.single() as ButtonControl).action(session)
 
         assertEquals(AppState.POINTS_SET, session.appState)
@@ -125,6 +127,7 @@ class BottomBarModelTest {
         assertEquals(1, controls.countNamed("BatchButton"))
         assertEquals(1, controls.countNamed("AddNorthButton"))
         assertEquals(1, controls.countNamed("SaveImageButton"))
+        assertEquals(1, controls.countNamed("StartMeasurementButton"))
         assertFalse(controls.containsNamed("LoadPhotoButton"))
     }
 
@@ -142,6 +145,57 @@ class BottomBarModelTest {
         assertEquals(1, controls.countNamed("BatchButton"))
         assertEquals(1, controls.countNamed("SliderControl"))
         assertEquals(1, controls.countNamed("SaveImageButton"))
+        assertEquals(0, controls.countNamed("StartMeasurementButton"))
         assertFalse(controls.containsNamed("LoadPhotoButton"))
+    }
+
+    @Test
+    fun northPlacedWithRulerShowsStartMeasurementButton() {
+        val model = BottomBarModel.default()
+        val session = sessionWithRulerAndNorth()
+
+        val controls = model.visibleRows(session).flatten()
+
+        assertEquals(1, controls.countNamed("StartMeasurementButton"))
+        assertEquals(0, controls.countNamed("AddNorthButton"))
+        assertFalse(controls.containsNamed("LoadPhotoButton"))
+    }
+
+    @Test
+    fun measuringShowsPointAndStyleControls() {
+        val model = BottomBarModel.default()
+        val session = measuringSession()
+
+        val controls = model.visibleRows(session).flatten()
+
+        assertEquals(0, controls.countNamed("StartMeasurementButton"))
+        assertEquals(1, controls.countNamed("SaveMeasurementPointButton"))
+        assertEquals(1, controls.countNamed("SliderControl"))
+        assertEquals(1, controls.countNamed("SelectControl"))
+        assertEquals(0, controls.countNamed("DeleteMeasurementButton"))
+        assertEquals(1, controls.countNamed("BatchButton"))
+        assertEquals(1, controls.countNamed("AddNorthButton"))
+        assertEquals(1, controls.countNamed("SaveImageButton"))
+
+        session.setMeasurementPoint(Point(3f, 4f))
+        assertTrue(session.commitMeasurementPoint(1))
+
+        val afterFirstPoint = model.visibleRows(session).flatten()
+        assertEquals(1, afterFirstPoint.countNamed("SaveMeasurementPointButton"))
+        assertEquals(1, afterFirstPoint.countNamed("DeleteMeasurementButton"))
+    }
+
+    @Test
+    fun measuringWithNorthShowsBothColorSelectorsAndReturnButton() {
+        val model = BottomBarModel.default()
+        val northSession = measuringSession(withNorth = true)
+        northSession.setMeasurementPoint(Point(1f, 2f))
+
+        val controls = model.visibleRows(northSession).flatten()
+        val addNorth = controls.first { it::class.simpleName == "AddNorthButton" }
+
+        assertEquals(2, controls.countNamed("SelectControl"))
+        assertTrue(controls.containsNamed("DeleteMeasurementButton"))
+        assertEquals("Вернуться к указателю", (addNorth as ButtonControl).displayTitle(northSession))
     }
 }

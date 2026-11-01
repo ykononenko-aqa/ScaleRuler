@@ -5,15 +5,21 @@ import androidx.compose.ui.geometry.Size
 import com.ykononenko.FakeImageFileService
 import com.ykononenko.FakeSettingsStore
 import com.ykononenko.awaitingPoint1Session
+import com.ykononenko.measuringSession
 import com.ykononenko.photoLoadedSession
 import com.ykononenko.press
+import com.ykononenko.sessionWithMeasurement
 import com.ykononenko.sessionWithNorth
 import com.ykononenko.sessionWithPoints
 import com.ykononenko.sessionWithRuler
 import com.ykononenko.state.AppState
 import com.ykononenko.model.Corner
 import com.ykononenko.model.LengthUnit
+import com.ykononenko.model.Measurement
+import com.ykononenko.model.MeasurementColor
+import com.ykononenko.model.MeasurementData
 import com.ykononenko.model.NorthArrowStyle
+import com.ykononenko.model.Point
 import com.ykononenko.model.RulerStyle
 import kotlin.math.abs
 import kotlin.test.Test
@@ -85,7 +91,7 @@ class EditorSessionTest {
         val session = sessionWithRuler()
         assertEquals(AppState.RULER_PLACED, session.appState)
         session.selectUnit(LengthUnit.CM)
-        session.setPendingPoint(Offset(1f, 2f))
+        session.setPendingPoint(Point(1f, 2f))
         session.updateMmText("77")
         session.updateCellCountText("9")
         session.updateScaleText("3")
@@ -110,9 +116,9 @@ class EditorSessionTest {
     fun setPendingPointStoresImageCoordinates() {
         val session = awaitingPoint1Session()
 
-        session.setPendingPoint(Offset(42f, 24f))
+        session.setPendingPoint(Point(42f, 24f))
 
-        assertEquals(Offset(42f, 24f), session.points.pendingPoint)
+        assertEquals(Point(42f, 24f), session.points.pendingPoint)
     }
 
     @Test
@@ -127,24 +133,24 @@ class EditorSessionTest {
     @Test
     fun commitPendingPointCommitsFirstPoint() {
         val session = awaitingPoint1Session()
-        session.setPendingPoint(Offset(10f, 20f))
+        session.setPendingPoint(Point(10f, 20f))
 
         assertTrue(session.commitPendingPoint(1))
 
-        assertEquals(Offset(10f, 20f), session.points.point1)
+        assertEquals(Point(10f, 20f), session.points.point1)
         assertNull(session.points.pendingPoint)
     }
 
     @Test
     fun commitPendingPointCommitsSecondPoint() {
         val session = awaitingPoint1Session()
-        session.setPendingPoint(Offset(10f, 20f))
+        session.setPendingPoint(Point(10f, 20f))
         assertTrue(session.commitPendingPoint(1))
-        session.setPendingPoint(Offset(80f, 70f))
+        session.setPendingPoint(Point(80f, 70f))
 
         assertTrue(session.commitPendingPoint(2))
 
-        assertEquals(Offset(80f, 70f), session.points.point2)
+        assertEquals(Point(80f, 70f), session.points.point2)
         assertNull(session.points.pendingPoint)
     }
 
@@ -451,5 +457,135 @@ class EditorSessionTest {
         session.resetForNewPhoto(com.ykononenko.testImage(300, 150))
 
         assertTrue(session.suppressWarnings)
+    }
+
+    @Test
+    fun measurementPointsBuildCompletedLine() {
+        val session = measuringSession()
+
+        session.setMeasurementPoint(Point(10f, 20f))
+        assertTrue(session.commitMeasurementPoint(1))
+        assertEquals(Point(10f, 20f), session.measurements.point1)
+        assertNull(session.measurements.pendingPoint)
+
+        session.setMeasurementPoint(Point(110f, 20f))
+        assertTrue(session.commitMeasurementPoint(2))
+
+        assertEquals(
+            listOf(Measurement(Point(10f, 20f), Point(110f, 20f), MeasurementColor.BLACK)),
+            session.measurements.items
+        )
+        assertNull(session.measurements.point1)
+        assertNull(session.measurements.pendingPoint)
+    }
+
+    @Test
+    fun measurementPointsAccumulateMultipleLines() {
+        val session = measuringSession()
+
+        session.setMeasurementPoint(Point(0f, 0f))
+        session.commitMeasurementPoint(1)
+        session.setMeasurementPoint(Point(10f, 0f))
+        session.commitMeasurementPoint(2)
+
+        session.setMeasurementPoint(Point(0f, 10f))
+        session.commitMeasurementPoint(1)
+        session.setMeasurementPoint(Point(0f, 30f))
+        session.commitMeasurementPoint(2)
+
+        assertEquals(2, session.measurements.items.size)
+    }
+
+    @Test
+    fun measurementCommitRequiresPendingAndFirstPoint() {
+        val session = measuringSession()
+
+        assertFalse(session.commitMeasurementPoint(1))
+
+        session.setMeasurementPoint(Point(5f, 5f))
+        assertFalse(session.commitMeasurementPoint(2))
+        assertNull(session.measurements.point1)
+        assertEquals(Point(5f, 5f), session.measurements.pendingPoint)
+    }
+
+    @Test
+    fun removeMeasurementClearsPendingThenFirstPointThenLastLine() {
+        val session = measuringSession()
+        session.setMeasurementPoint(Point(1f, 1f))
+        session.removeLastMeasurement()
+        assertNull(session.measurements.pendingPoint)
+
+        session.setMeasurementPoint(Point(2f, 2f))
+        session.commitMeasurementPoint(1)
+        session.removeLastMeasurement()
+        assertNull(session.measurements.point1)
+
+        session.setMeasurementPoint(Point(3f, 3f))
+        session.commitMeasurementPoint(1)
+        session.setMeasurementPoint(Point(4f, 4f))
+        session.commitMeasurementPoint(2)
+        assertEquals(1, session.measurements.items.size)
+
+        session.removeLastMeasurement()
+        assertTrue(session.measurements.items.isEmpty())
+    }
+
+    @Test
+    fun measurementColorAffectsOnlyNewLines() {
+        val session = measuringSession()
+        session.setMeasurementPoint(Point(0f, 0f))
+        session.commitMeasurementPoint(1)
+        session.setMeasurementPoint(Point(10f, 0f))
+        session.commitMeasurementPoint(2)
+
+        session.selectMeasurementColor(MeasurementColor.WHITE)
+        session.setMeasurementPoint(Point(0f, 10f))
+        session.commitMeasurementPoint(1)
+        session.setMeasurementPoint(Point(10f, 10f))
+        session.commitMeasurementPoint(2)
+
+        assertEquals(MeasurementColor.BLACK, session.measurements.items[0].color)
+        assertEquals(MeasurementColor.WHITE, session.measurements.items[1].color)
+    }
+
+    @Test
+    fun measurementFontSizeIsClamped() {
+        val session = measuringSession()
+
+        session.updateMeasurementFontSize(1f)
+        assertEquals(MeasurementData.MIN_FONT_PX, session.measurementFontSize)
+
+        session.updateMeasurementFontSize(100f)
+        assertEquals(MeasurementData.MAX_FONT_PX, session.measurementFontSize)
+
+        session.updateMeasurementFontSize(24f)
+        assertEquals(24f, session.measurementFontSize)
+    }
+
+    @Test
+    fun resetForNewPhotoClearsMeasurementsButKeepsToolSettings() {
+        val session = sessionWithMeasurement()
+        session.selectMeasurementColor(MeasurementColor.WHITE)
+        session.updateMeasurementFontSize(24f)
+
+        session.resetForNewPhoto(com.ykononenko.testImage(300, 150))
+
+        assertTrue(session.measurements.items.isEmpty())
+        assertNull(session.measurements.pendingPoint)
+        assertNull(session.measurements.point1)
+        assertEquals(MeasurementColor.WHITE, session.measurementColor)
+        assertEquals(24f, session.measurementFontSize)
+    }
+
+    @Test
+    fun saveImagePassesMeasurementsAndFontSize() {
+        val service = FakeImageFileService()
+        val session = sessionWithMeasurement(service)
+        session.updateMeasurementFontSize(22f)
+
+        assertTrue(session.saveImage())
+
+        assertEquals(session.measurements.items, service.savedMeasurements)
+        assertEquals(22f, service.savedMeasurementFontSize)
     }
 }

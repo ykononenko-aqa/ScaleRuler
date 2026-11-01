@@ -5,8 +5,6 @@ import com.ykononenko.model.NorthArrowStyle
 import org.jetbrains.skia.Canvas as SkiaCanvas
 import org.jetbrains.skia.Color
 import org.jetbrains.skia.Font
-import org.jetbrains.skia.FontMgr
-import org.jetbrains.skia.FontStyle
 import org.jetbrains.skia.Paint
 import org.jetbrains.skia.PaintMode
 import org.jetbrains.skia.Path
@@ -26,9 +24,10 @@ import org.jetbrains.skia.Typeface
 object NorthArrowRenderer {
 
     /**
-     * Жирный шрифт для буквы «С», определяется один раз при первом обращении.
+     * Жирный шрифт для буквы «С»; общий для всех отрисовщиков.
      */
-    private val labelTypeface: Typeface? by lazy { resolveLabelTypeface() }
+    private val labelTypeface: Typeface?
+        get() = LabelTypeface.bold
 
     /**
      * Рисует указатель на заданном Skia-канвасе.
@@ -122,21 +121,6 @@ object NorthArrowRenderer {
         } finally {
             line.close()
         }
-    }
-
-    /**
-     * Подбирает системный жирный шрифт для буквы «С» так же, как для подписей
-     * линейки.
-     *
-     * @return найденный жирный [Typeface] или `null`, если ничего не найдено
-     */
-    private fun resolveLabelTypeface(): Typeface? {
-        val candidates = arrayOf("Segoe UI", "Arial", "Helvetica", "DejaVu Sans", "Liberation Sans")
-        for (family in candidates) {
-            FontMgr.default.matchFamilyStyle(family, FontStyle.BOLD)?.let { return it }
-        }
-        FontMgr.default.legacyMakeTypeface("sans-serif", FontStyle.BOLD)?.let { return it }
-        return FontMgr.default.matchFamilyStyle(null, FontStyle.BOLD)
     }
 
     /**

@@ -7,8 +7,6 @@ import com.ykononenko.model.RulerStyle
 import org.jetbrains.skia.Canvas as SkiaCanvas
 import org.jetbrains.skia.Color
 import org.jetbrains.skia.Font
-import org.jetbrains.skia.FontMgr
-import org.jetbrains.skia.FontStyle
 import org.jetbrains.skia.Paint
 import org.jetbrains.skia.TextLine
 import org.jetbrains.skia.Typeface
@@ -82,12 +80,13 @@ interface RulerRenderer {
 abstract class BaseRulerRenderer : RulerRenderer {
 
     /**
-     * Жирный шрифт для подписей, определяется один раз при первом обращении.
+     * Жирный шрифт для подписей; общий для всех отрисовщиков.
      *
      * Может быть `null`, если подходящий системный шрифт не найден; тогда Skia
      * использует шрифт по умолчанию.
      */
-    private val labelTypeface: Typeface? by lazy { resolveLabelTypeface() }
+    private val labelTypeface: Typeface?
+        get() = LabelTypeface.bold
 
     /**
      * Цвет подписей линейки. По умолчанию чёрный; реализации могут вернуть цвет
@@ -185,25 +184,6 @@ abstract class BaseRulerRenderer : RulerRenderer {
             canvas.scale(scale, scale)
             canvas.rotate(-90f)
         }
-    }
-
-    /**
-     * Подбирает системный жирный шрифт для подписей линейки.
-     *
-     * Перебирает типичные для целевых платформ семейства в порядке приоритета,
-     * затем пробует обобщённое имя `sans-serif` и, в последнюю очередь, шрифт по
-     * умолчанию. Нужен потому, что неявный шрифт (`Font(null, size)`) на некоторых
-     * системах оказывается пустым и не рисует ни одного глифа.
-     *
-     * @return найденный жирный [Typeface] или `null`, если ничего не найдено
-     */
-    private fun resolveLabelTypeface(): Typeface? {
-        val candidates = arrayOf("Segoe UI", "Arial", "Helvetica", "DejaVu Sans", "Liberation Sans")
-        for (family in candidates) {
-            FontMgr.default.matchFamilyStyle(family, FontStyle.BOLD)?.let { return it }
-        }
-        FontMgr.default.legacyMakeTypeface("sans-serif", FontStyle.BOLD)?.let { return it }
-        return FontMgr.default.matchFamilyStyle(null, FontStyle.BOLD)
     }
 
     /**
