@@ -32,7 +32,6 @@ interface ImageFileService {
         ruler: RulerData?,
         northArrow: NorthArrowData?,
         measurements: List<Measurement>,
-        measurementFontSize: Float,
         unit: LengthUnit
     ): Boolean
 }

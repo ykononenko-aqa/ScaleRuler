@@ -2,7 +2,6 @@ package com.ykononenko.logic
 
 import com.ykononenko.model.LengthUnit
 import com.ykononenko.model.Measurement
-import com.ykononenko.model.MeasurementData
 import com.ykononenko.model.NorthArrowData
 import com.ykononenko.model.RulerData
 import org.jetbrains.skia.Image as SkiaImage
@@ -31,7 +30,6 @@ object BatchProcessor {
      * @param unit единица измерения для подписей линейки
      * @param measurements размерные линии в координатах текущего изображения;
      *   координаты переносятся на все фото без масштабирования
-     * @param measurementFontSize размер шрифта подписей размерных линий
      * @param onProgress обратный вызов прогресса: номер текущего файла, всего
      *   файлов и имя обрабатываемого файла
      * @return количество успешно обработанных файлов
@@ -43,7 +41,6 @@ object BatchProcessor {
         northArrow: NorthArrowData?,
         unit: LengthUnit,
         measurements: List<Measurement> = emptyList(),
-        measurementFontSize: Float = MeasurementData.DEFAULT_FONT_PX,
         onProgress: (current: Int, total: Int, fileName: String) -> Unit
     ): Int {
         val extensions = listOf("jpg", "jpeg", "png", "bmp")
@@ -72,8 +69,7 @@ object BatchProcessor {
                     ruler = adjustedRuler,
                     northArrow = adjustedNorth,
                     unit = unit,
-                    measurements = measurements,
-                    measurementFontSize = measurementFontSize
+                    measurements = measurements
                 )
                 if (surface != null) {
                     val targetFile = File(targetDir, file.nameWithoutExtension + ".png")

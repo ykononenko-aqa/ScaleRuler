@@ -29,7 +29,6 @@ import javax.swing.JFileChooser
  *   наносится только указатель на север
  * @param northArrow указатель на север или `null`
  * @param measurements размерные линии для нанесения на все фото
- * @param measurementFontSize размер шрифта подписей размерных линий
  * @param unit единица измерения для подписей линейки
  * @param onDismiss закрытие диалога
  */
@@ -38,7 +37,6 @@ fun BatchDialog(
     ruler: RulerData?,
     northArrow: NorthArrowData?,
     measurements: List<Measurement>,
-    measurementFontSize: Float,
     unit: LengthUnit,
     onDismiss: () -> Unit
 ) {
@@ -142,7 +140,6 @@ fun BatchDialog(
                                                     northArrow = northArrow,
                                                     unit = unit,
                                                     measurements = measurements,
-                                                    measurementFontSize = measurementFontSize,
                                                     onProgress = { cur, tot, file ->
                                                         progress = cur
                                                         total = tot

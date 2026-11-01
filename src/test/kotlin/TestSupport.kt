@@ -54,9 +54,6 @@ class FakeImageFileService(
     var savedMeasurements: List<Measurement> = emptyList()
         private set
 
-    var savedMeasurementFontSize: Float? = null
-        private set
-
     override fun openImage(): ImageBitmap? = imageToOpen
 
     override fun saveImage(
@@ -64,7 +61,6 @@ class FakeImageFileService(
         ruler: RulerData?,
         northArrow: NorthArrowData?,
         measurements: List<Measurement>,
-        measurementFontSize: Float,
         unit: LengthUnit
     ): Boolean {
         saveCalls += 1
@@ -72,7 +68,6 @@ class FakeImageFileService(
         savedRuler = ruler
         savedNorthArrow = northArrow
         savedMeasurements = measurements
-        savedMeasurementFontSize = measurementFontSize
         savedUnit = unit
         return saveResult
     }

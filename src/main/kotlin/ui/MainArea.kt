@@ -78,7 +78,6 @@ fun MainArea(
                             measurements = session.measurements.items,
                             ruler = ruler,
                             unit = session.unit,
-                            fontSizePx = session.measurementFontSize,
                             scale = layout.scale,
                             offsetX = layout.offsetX,
                             offsetY = layout.offsetY
