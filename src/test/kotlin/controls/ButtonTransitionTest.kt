@@ -2,6 +2,7 @@ package com.ykononenko.controls
 
 import androidx.compose.ui.geometry.Offset
 import com.ykononenko.FakeImageFileService
+import com.ykononenko.FakeSettingsStore
 import com.ykononenko.awaitingPoint1Session
 import com.ykononenko.photoLoadedSession
 import com.ykononenko.press
@@ -31,7 +32,7 @@ class ButtonTransitionTest {
     @Test
     fun loadPhotoButtonTransitionsWhenImageOpened() {
         val service = FakeImageFileService()
-        val session = EditorSession(service)
+        val session = EditorSession(service, settingsStore = FakeSettingsStore())
         val image = testImage()
         service.imageToOpen = image
 
@@ -44,7 +45,7 @@ class ButtonTransitionTest {
     @Test
     fun loadPhotoButtonKeepsStateWhenOpenCancelled() {
         val service = FakeImageFileService(imageToOpen = null)
-        val session = EditorSession(service)
+        val session = EditorSession(service, settingsStore = FakeSettingsStore())
 
         session.press("LoadPhotoButton")
 
@@ -63,7 +64,10 @@ class ButtonTransitionTest {
 
     @Test
     fun startPointPlacementDoesNothingWithoutImage() {
-        val session = EditorSession(FakeImageFileService())
+        val session = EditorSession(
+            FakeImageFileService(),
+            settingsStore = FakeSettingsStore()
+        )
 
         StartPointPlacementButton().action(session)
 
@@ -204,6 +208,33 @@ class ButtonTransitionTest {
 
         assertTrue(session.showNorthWarning)
         assertEquals(state, session.appState)
+    }
+
+    @Test
+    fun addNorthButtonCreatesArrowSilentlyWhenWarningsSuppressed() {
+        val session = photoLoadedSession()
+        session.updateSuppressWarnings(true)
+
+        session.press("AddNorthButton")
+
+        assertEquals(AppState.NORTH_PLACED, session.appState)
+        assertNotNull(session.northArrow)
+        assertNull(session.ruler)
+        assertFalse(session.showNorthWarning)
+    }
+
+    @Test
+    fun addNorthButtonCreatesArrowSilentlyFromRulerPlaced() {
+        val session = sessionWithRuler()
+        val ruler = session.ruler
+        session.updateSuppressWarnings(true)
+
+        session.press("AddNorthButton")
+
+        assertEquals(AppState.NORTH_PLACED, session.appState)
+        assertNotNull(session.northArrow)
+        assertEquals(ruler, session.ruler)
+        assertFalse(session.showNorthWarning)
     }
 
     @Test

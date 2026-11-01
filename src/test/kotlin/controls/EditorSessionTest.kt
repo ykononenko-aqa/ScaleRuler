@@ -3,6 +3,7 @@ package com.ykononenko.controls
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import com.ykononenko.FakeImageFileService
+import com.ykononenko.FakeSettingsStore
 import com.ykononenko.awaitingPoint1Session
 import com.ykononenko.photoLoadedSession
 import com.ykononenko.press
@@ -26,7 +27,10 @@ class EditorSessionTest {
 
     @Test
     fun initialStateHasDefaults() {
-        val session = EditorSession(FakeImageFileService())
+        val session = EditorSession(
+            FakeImageFileService(),
+            settingsStore = FakeSettingsStore()
+        )
 
         assertEquals(AppState.IDLE, session.appState)
         assertNull(session.image)
@@ -41,12 +45,13 @@ class EditorSessionTest {
         assertNull(session.points.point2)
         assertFalse(session.showNorthWarning)
         assertFalse(session.showBatchDialog)
+        assertFalse(session.suppressWarnings)
     }
 
     @Test
     fun loadPhotoTransitionsAndResetsFields() {
         val service = FakeImageFileService()
-        val session = EditorSession(service)
+        val session = EditorSession(service, settingsStore = FakeSettingsStore())
         session.updateMmText("12")
         session.updateCellCountText("8")
         session.updateScaleText("2")
@@ -67,7 +72,7 @@ class EditorSessionTest {
     @Test
     fun loadPhotoCancelledLeavesStateAndImageUnchanged() {
         val service = FakeImageFileService(imageToOpen = null)
-        val session = EditorSession(service)
+        val session = EditorSession(service, settingsStore = FakeSettingsStore())
 
         session.press("LoadPhotoButton")
 
@@ -407,5 +412,44 @@ class EditorSessionTest {
         session.dismissBatch()
         assertFalse(session.showBatchDialog)
         assertEquals(state, session.appState)
+    }
+
+    @Test
+    fun suppressWarningsLoadsFromSettingsStore() {
+        val store = FakeSettingsStore(AppSettings(suppressWarnings = true))
+
+        val session = EditorSession(
+            FakeImageFileService(),
+            settingsStore = store
+        )
+
+        assertTrue(session.suppressWarnings)
+        assertEquals(1, store.loadCalls)
+    }
+
+    @Test
+    fun updateSuppressWarningsSavesSetting() {
+        val store = FakeSettingsStore()
+        val session = EditorSession(
+            FakeImageFileService(),
+            settingsStore = store
+        )
+
+        session.updateSuppressWarnings(true)
+
+        assertTrue(session.suppressWarnings)
+        assertEquals(1, store.saveCalls)
+        assertEquals(AppSettings(suppressWarnings = true), store.savedSettings)
+    }
+
+    @Test
+    fun resetForNewPhotoKeepsSuppressWarnings() {
+        val store = FakeSettingsStore(AppSettings(suppressWarnings = true))
+        val session = sessionWithRuler(settingsStore = store)
+        assertTrue(session.suppressWarnings)
+
+        session.resetForNewPhoto(com.ykononenko.testImage(300, 150))
+
+        assertTrue(session.suppressWarnings)
     }
 }
