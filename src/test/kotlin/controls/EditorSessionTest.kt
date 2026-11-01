@@ -578,7 +578,7 @@ class EditorSessionTest {
     }
 
     @Test
-    fun saveImagePassesMeasurementsAndFontSize() {
+    fun saveImagePassesMeasurementsWithTheirFontSizes() {
         val service = FakeImageFileService()
         val session = sessionWithMeasurement(service)
         session.updateMeasurementFontSize(22f)
@@ -586,6 +586,32 @@ class EditorSessionTest {
         assertTrue(session.saveImage())
 
         assertEquals(session.measurements.items, service.savedMeasurements)
-        assertEquals(22f, service.savedMeasurementFontSize)
+        assertEquals(22f, service.savedMeasurements.single().fontSizePx)
+    }
+
+    @Test
+    fun fontSizeAffectsOnlyLastMeasurement() {
+        val session = sessionWithMeasurement()
+
+        session.setMeasurementPoint(Point(0f, 10f))
+        session.commitMeasurementPoint(1)
+        session.setMeasurementPoint(Point(10f, 10f))
+        session.commitMeasurementPoint(2)
+
+        session.updateMeasurementFontSize(24f)
+
+        assertEquals(MeasurementData.DEFAULT_FONT_PX, session.measurements.items[0].fontSizePx)
+        assertEquals(24f, session.measurements.items[1].fontSizePx)
+
+        session.setMeasurementPoint(Point(0f, 20f))
+        session.commitMeasurementPoint(1)
+        session.setMeasurementPoint(Point(10f, 20f))
+        session.commitMeasurementPoint(2)
+
+        session.updateMeasurementFontSize(32f)
+
+        assertEquals(MeasurementData.DEFAULT_FONT_PX, session.measurements.items[0].fontSizePx)
+        assertEquals(24f, session.measurements.items[1].fontSizePx)
+        assertEquals(32f, session.measurements.items[2].fontSizePx)
     }
 }

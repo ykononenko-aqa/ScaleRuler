@@ -226,7 +226,6 @@ class EditorSession(
             ruler = ruler,
             northArrow = northArrow,
             measurements = measurements.items,
-            measurementFontSize = measurementFontSize,
             unit = unit
         )
     }
@@ -254,7 +253,12 @@ class EditorSession(
             2 -> {
                 val first = measurements.point1 ?: return false
                 measurements.copy(
-                    items = measurements.items + Measurement(first, pending, measurementColor),
+                    items = measurements.items + Measurement(
+                        point1 = first,
+                        point2 = pending,
+                        color = measurementColor,
+                        fontSizePx = measurementFontSize
+                    ),
                     point1 = null,
                     pendingPoint = null
                 )
@@ -284,12 +288,23 @@ class EditorSession(
         measurementColor = color
     }
 
-    /** Устанавливает размер шрифта подписей размерных линий. */
+    /**
+     * Устанавливает размер шрифта для последней и будущих размерных линий.
+     *
+     * Уже созданные ранее линии сохраняют свой размер подписи.
+     */
     fun updateMeasurementFontSize(value: Float) {
-        measurementFontSize = value.coerceIn(
+        val clamped = value.coerceIn(
             MeasurementData.MIN_FONT_PX,
             MeasurementData.MAX_FONT_PX
         )
+        measurementFontSize = clamped
+        val items = measurements.items
+        if (items.isNotEmpty()) {
+            measurements = measurements.copy(
+                items = items.dropLast(1) + items.last().copy(fontSizePx = clamped)
+            )
+        }
     }
 
     /** Очищает незавершённые точки текущей линии, не удаляя готовые линии. */

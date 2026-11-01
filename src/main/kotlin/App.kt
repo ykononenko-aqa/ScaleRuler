@@ -85,7 +85,6 @@ fun App(onExit: () -> Unit = {}) {
                 ruler = session.ruler,
                 northArrow = session.northArrow,
                 measurements = session.measurements.items,
-                measurementFontSize = session.measurementFontSize,
                 unit = session.unit,
                 onDismiss = { session.dismissBatch() }
             )

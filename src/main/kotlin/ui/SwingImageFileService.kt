@@ -42,7 +42,6 @@ class SwingImageFileService : ImageFileService {
         ruler: RulerData?,
         northArrow: NorthArrowData?,
         measurements: List<Measurement>,
-        measurementFontSize: Float,
         unit: LengthUnit
     ): Boolean {
         val chooser = JFileChooser().apply {
@@ -60,7 +59,6 @@ class SwingImageFileService : ImageFileService {
                 ruler = ruler,
                 northArrow = northArrow,
                 measurements = measurements,
-                measurementFontSize = measurementFontSize,
                 unit = unit
             )
             ImageConverter.surfaceToFile(surface, out)

@@ -4,7 +4,6 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import com.ykononenko.model.LengthUnit
 import com.ykononenko.model.Measurement
-import com.ykononenko.model.MeasurementData
 import com.ykononenko.model.NorthArrowData
 import com.ykononenko.model.RulerData
 import org.jetbrains.skia.Image as SkiaImage
@@ -28,7 +27,6 @@ object ImageConverter {
      * @param northArrow указатель на север или `null`
      * @param unit единица измерения для подписей линейки
      * @param measurements размерные линии в координатах изображения
-     * @param measurementFontSize размер шрифта подписей размерных линий
      * @return готовая к сохранению [Surface] или `null` при ошибке чтения
      */
     fun fileToSurface(
@@ -36,14 +34,13 @@ object ImageConverter {
         ruler: RulerData?,
         northArrow: NorthArrowData?,
         unit: LengthUnit,
-        measurements: List<Measurement> = emptyList(),
-        measurementFontSize: Float = MeasurementData.DEFAULT_FONT_PX
+        measurements: List<Measurement> = emptyList()
     ): Surface? {
         return try {
             val bytes = file.readBytes()
             val skiaImage = SkiaImage.makeFromEncoded(bytes)
             val image = skiaImage.toComposeImageBitmap()
-            imageToSurface(image, ruler, northArrow, unit, measurements, measurementFontSize)
+            imageToSurface(image, ruler, northArrow, unit, measurements)
         } catch (e: Exception) {
             e.printStackTrace()
             null
@@ -59,7 +56,6 @@ object ImageConverter {
      * @param northArrow указатель на север или `null`
      * @param unit единица измерения для подписей линейки
      * @param measurements размерные линии в координатах изображения
-     * @param measurementFontSize размер шрифта подписей размерных линий
      * @return поверхность в разрешении исходного изображения
      */
     fun bitmapToSurface(
@@ -67,10 +63,9 @@ object ImageConverter {
         ruler: RulerData?,
         northArrow: NorthArrowData?,
         unit: LengthUnit,
-        measurements: List<Measurement> = emptyList(),
-        measurementFontSize: Float = MeasurementData.DEFAULT_FONT_PX
+        measurements: List<Measurement> = emptyList()
     ): Surface {
-        return imageToSurface(image, ruler, northArrow, unit, measurements, measurementFontSize)
+        return imageToSurface(image, ruler, northArrow, unit, measurements)
     }
 
     /**
@@ -82,7 +77,6 @@ object ImageConverter {
      * @param northArrow указатель на север или `null`
      * @param unit единица измерения для подписей линейки
      * @param measurements размерные линии в координатах изображения
-     * @param measurementFontSize размер шрифта подписей размерных линий
      * @return растровая поверхность размером с изображение
      */
     private fun imageToSurface(
@@ -90,8 +84,7 @@ object ImageConverter {
         ruler: RulerData?,
         northArrow: NorthArrowData?,
         unit: LengthUnit,
-        measurements: List<Measurement>,
-        measurementFontSize: Float
+        measurements: List<Measurement>
     ): Surface {
         val w = image.width
         val h = image.height
@@ -120,7 +113,6 @@ object ImageConverter {
                 measurements = measurements,
                 ruler = ruler,
                 unit = unit,
-                fontSizePx = measurementFontSize,
                 scale = 1f,
                 offsetX = 0f,
                 offsetY = 0f
