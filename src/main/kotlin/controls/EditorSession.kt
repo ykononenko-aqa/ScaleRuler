@@ -65,7 +65,12 @@ class EditorSession(
     var measurements: MeasurementData by mutableStateOf(MeasurementData())
         private set
 
-    /** Цвет новых размерных линий. */
+    /**
+     * Цвет новых размерных линий.
+     *
+     * Если первая точка новой линии ещё не зафиксирована, этот же цвет
+     * применяется к последней готовой линии.
+     */
     var measurementColor: MeasurementColor by mutableStateOf(MeasurementColor.BLACK)
         private set
 
@@ -283,9 +288,24 @@ class EditorSession(
         showMeasurementDeleteWarning = false
     }
 
-    /** Выбирает цвет для новых размерных линий. */
+    /**
+     * Выбирает цвет новых размерных линий.
+     *
+     * Если готовые линии уже есть, а первая точка следующей ещё не
+     * зафиксирована (`point1 == null`), последняя линия перекрашивается в
+     * выбранный цвет. После фиксации первой точки меняется только цвет будущих
+     * линий.
+     */
     fun selectMeasurementColor(color: MeasurementColor) {
         measurementColor = color
+
+        val current = measurements
+        if (current.point1 == null && current.items.isNotEmpty()) {
+            measurements = current.copy(
+                items = current.items.dropLast(1) +
+                    current.items.last().copy(color = color)
+            )
+        }
     }
 
     /**
