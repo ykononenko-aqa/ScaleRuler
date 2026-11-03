@@ -59,6 +59,10 @@ class BottomBarModelTest {
 
         val primaryRow = rows.first { it.contains(startButton) }
         assertTrue(primaryRow.contains(addNorthButton))
+        assertEquals(
+            listOf("StartPointPlacementButton", "AddNorthButton"),
+            primaryRow.map { it::class.simpleName }
+        )
     }
 
     @Test

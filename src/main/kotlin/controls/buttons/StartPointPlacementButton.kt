@@ -12,7 +12,7 @@ class StartPointPlacementButton : StateButton(
     from = setOf(AppState.PHOTO_LOADED),
     to = AppState.AWAITING_POINT_1,
     size = DpSize(240.dp, 48.dp),
-    order = 20
+    order = 0
 ) {
 
     override fun perform(session: EditorSession): Boolean = session.image != null

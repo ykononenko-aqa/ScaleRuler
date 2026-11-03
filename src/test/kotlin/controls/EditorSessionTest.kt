@@ -531,21 +531,87 @@ class EditorSessionTest {
     }
 
     @Test
-    fun measurementColorAffectsOnlyNewLines() {
-        val session = measuringSession()
-        session.setMeasurementPoint(Point(0f, 0f))
-        session.commitMeasurementPoint(1)
-        session.setMeasurementPoint(Point(10f, 0f))
-        session.commitMeasurementPoint(2)
+    fun measurementColorRecolorsLastLineWhenFirstPointNotSet() {
+        val session = sessionWithMeasurement()
 
         session.selectMeasurementColor(MeasurementColor.WHITE)
+
+        assertEquals(MeasurementColor.WHITE, session.measurementColor)
+        assertEquals(
+            MeasurementColor.WHITE,
+            session.measurements.items.single().color
+        )
+
+        session.setMeasurementPoint(Point(0f, 20f))
+        session.commitMeasurementPoint(1)
+        session.setMeasurementPoint(Point(10f, 20f))
+        session.commitMeasurementPoint(2)
+
+        assertEquals(2, session.measurements.items.size)
+        assertTrue(
+            session.measurements.items.all { it.color == MeasurementColor.WHITE }
+        )
+    }
+
+    @Test
+    fun measurementColorDoesNotRecolorLastLineWhenFirstPointSet() {
+        val session = sessionWithMeasurement()
         session.setMeasurementPoint(Point(0f, 10f))
         session.commitMeasurementPoint(1)
+
+        session.selectMeasurementColor(MeasurementColor.WHITE)
+
+        assertEquals(MeasurementColor.WHITE, session.measurementColor)
+        assertEquals(
+            MeasurementColor.BLACK,
+            session.measurements.items.single().color
+        )
+
         session.setMeasurementPoint(Point(10f, 10f))
         session.commitMeasurementPoint(2)
 
         assertEquals(MeasurementColor.BLACK, session.measurements.items[0].color)
         assertEquals(MeasurementColor.WHITE, session.measurements.items[1].color)
+    }
+
+    @Test
+    fun measurementColorRecolorsOnlyLastLine() {
+        val session = sessionWithMeasurement()
+        session.setMeasurementPoint(Point(0f, 10f))
+        session.commitMeasurementPoint(1)
+        session.setMeasurementPoint(Point(10f, 10f))
+        session.commitMeasurementPoint(2)
+        assertEquals(2, session.measurements.items.size)
+
+        session.selectMeasurementColor(MeasurementColor.WHITE)
+
+        assertEquals(MeasurementColor.BLACK, session.measurements.items[0].color)
+        assertEquals(MeasurementColor.WHITE, session.measurements.items[1].color)
+    }
+
+    @Test
+    fun measurementColorWithPendingPointRecolorsLastLine() {
+        val session = sessionWithMeasurement()
+        session.setMeasurementPoint(Point(0f, 10f))
+        assertNotNull(session.measurements.pendingPoint)
+        assertNull(session.measurements.point1)
+
+        session.selectMeasurementColor(MeasurementColor.WHITE)
+
+        assertEquals(
+            MeasurementColor.WHITE,
+            session.measurements.items.single().color
+        )
+    }
+
+    @Test
+    fun measurementColorWithoutLinesOnlyUpdatesToolColor() {
+        val session = measuringSession()
+
+        session.selectMeasurementColor(MeasurementColor.WHITE)
+
+        assertEquals(MeasurementColor.WHITE, session.measurementColor)
+        assertTrue(session.measurements.items.isEmpty())
     }
 
     @Test

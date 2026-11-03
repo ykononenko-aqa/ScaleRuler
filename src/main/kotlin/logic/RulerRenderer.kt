@@ -14,6 +14,9 @@ import org.jetbrains.skia.Typeface
 /**
  * Выступающие за габарит линейки части подписей в пикселях изображения.
  *
+ * Подписи выносятся за концы линейки, если не помещаются в ячейку по ширине
+ * или если шрифт выше самой линейки.
+ *
  * @property startPx выступ перед началом линейки (влево для горизонтальной
  *   ориентации, вниз — для вертикальной)
  * @property endPx выступ за концом линейки (вправо для горизонтальной
@@ -104,8 +107,9 @@ abstract class BaseRulerRenderer : RulerRenderer {
 
     /**
      * Признак того, что не помещающиеся в ячейку подписи выносятся за габарит
-     * линейки. По умолчанию `false` — подпись остаётся внутри и наезжает на
-     * соседние клетки.
+     * линейки. Подпись считается не помещающейся, если она шире ячейки или выше
+     * самой линейки. По умолчанию `false` — подпись остаётся внутри и наезжает
+     * на соседние клетки.
      */
     protected open val movesOverflowingOutside: Boolean
         get() = false
@@ -127,14 +131,16 @@ abstract class BaseRulerRenderer : RulerRenderer {
             ruler.scalePerCell * ruler.scalePxPerMm
         }
         val fitLimit = availablePx * LABEL_FIT_FRACTION
+        val heightOverflows = labelHeightOverflows(font.size, rh)
 
-        val start = if (ruler.cellCount <= 1 || measureWidth(firstLabelText(ruler), font) <= fitLimit) {
+        val firstWidth = measureWidth(firstLabelText(ruler), font)
+        val start = if (ruler.cellCount <= 1 || (!heightOverflows && firstWidth <= fitLimit)) {
             0f
         } else {
-            measureWidth(firstLabelText(ruler), font)
+            firstWidth
         }
         val lastWidth = measureWidth(lastLabelText(ruler, unit), font)
-        val end = if (lastWidth > fitLimit) lastWidth else 0f
+        val end = if (heightOverflows || lastWidth > fitLimit) lastWidth else 0f
 
         return LabelOverflow(start, end)
     }
@@ -240,6 +246,7 @@ abstract class BaseRulerRenderer : RulerRenderer {
         val stepPx = ruler.scalePerCell * ruler.scalePxPerMm * scale
 
         val font = Font(labelTypeface, fontSize).apply { isEmboldened = true }
+        val heightOverflows = labelHeightOverflows(fontSize, rh)
         val baselineY = originY + rh - 2f
         val insidePaint = Paint().apply { color = labelColor }
         val lastInsidePaint = Paint().apply { color = lastDivisionLabelColor(ruler) }
@@ -250,7 +257,9 @@ abstract class BaseRulerRenderer : RulerRenderer {
             val text = lastLabelText(ruler, unit)
             val lastEdgeX = originX + stepPx
             val availablePx = ruler.lengthMm * ruler.scalePxPerMm * scale
-            if (movesOverflowingOutside && measureWidth(text, font) > availablePx * LABEL_FIT_FRACTION) {
+            if (movesOverflowingOutside &&
+                (heightOverflows || measureWidth(text, font) > availablePx * LABEL_FIT_FRACTION)
+            ) {
                 drawLabel(canvas, text, lastEdgeX, baselineY, font, outsidePaint, alignLeft = true)
             } else {
                 drawLabel(canvas, text, lastEdgeX, baselineY, font, lastInsidePaint)
@@ -262,7 +271,9 @@ abstract class BaseRulerRenderer : RulerRenderer {
 
         // Первое деление — только число
         val firstText = firstLabelText(ruler)
-        if (movesOverflowingOutside && measureWidth(firstText, font) > stepPx * LABEL_FIT_FRACTION) {
+        if (movesOverflowingOutside &&
+            (heightOverflows || measureWidth(firstText, font) > stepPx * LABEL_FIT_FRACTION)
+        ) {
             // Не помещается — выносим за левый конец линейки
             drawLabel(canvas, firstText, originX, baselineY, font, outsidePaint)
         } else {
@@ -273,7 +284,9 @@ abstract class BaseRulerRenderer : RulerRenderer {
         // Последнее деление — число с единицей измерения
         val lastText = lastLabelText(ruler, unit)
         val lastEdgeX = originX + ruler.cellCount * stepPx
-        if (movesOverflowingOutside && measureWidth(lastText, font) > stepPx * LABEL_FIT_FRACTION) {
+        if (movesOverflowingOutside &&
+            (heightOverflows || measureWidth(lastText, font) > stepPx * LABEL_FIT_FRACTION)
+        ) {
             // Не помещается — выносим за правый конец линейки
             drawLabel(canvas, lastText, lastEdgeX, baselineY, font, outsidePaint, alignLeft = true)
         } else {
@@ -287,6 +300,15 @@ abstract class BaseRulerRenderer : RulerRenderer {
      */
     private fun labelFontSize(rulerHeightPx: Float): Float =
         (rulerHeightPx * LABEL_FONT_HEIGHT_FRACTION).coerceIn(LABEL_MIN_FONT_PX, LABEL_MAX_FONT_PX)
+
+    /**
+     * Проверяет, что подпись не помещается по высоте внутри линейки.
+     *
+     * @param fontSize размер шрифта подписи в пикселях канваса
+     * @param rulerHeightPx высота линейки в пикселях канваса
+     */
+    private fun labelHeightOverflows(fontSize: Float, rulerHeightPx: Float): Boolean =
+        fontSize > rulerHeightPx * LABEL_FIT_FRACTION
 
     /** Текст подписи первого деления — только число, без единицы. */
     private fun firstLabelText(ruler: RulerData): String = formatValue(ruler.scalePerCell)
@@ -354,7 +376,7 @@ abstract class BaseRulerRenderer : RulerRenderer {
         /** Сдвиг подписи «1» влево как доля размера шрифта. */
         const val LABEL_ONE_LEFT_SHIFT_FRACTION = 0.2f
 
-        /** Доля ширины ячейки, которую может занимать подпись. */
+        /** Доля ячейки по ширине или высоты линейки, которую может занимать подпись. */
         const val LABEL_FIT_FRACTION = 0.9f
 
         /** Размер шрифта подписи как доля высоты линейки. */

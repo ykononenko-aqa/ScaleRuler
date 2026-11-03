@@ -164,7 +164,7 @@ class BottomBarModel(val controls: List<Control>) {
                 AddNorthButton(
                     from = setOf(AppState.PHOTO_LOADED),
                     row = ControlRow.PRIMARY,
-                    order = 0
+                    order = 20
                 ),
                 SliderControl(
                     title = "Размер шрифта: ",
